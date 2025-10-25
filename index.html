@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="description" content="Las Crónicas Malditas — cuenta regresiva a Halloween y revelación de historias malditas desde tu canal." />
+
+    <title>Las Crónicas Malditas — Cuenta Regresiva a Halloween</title>
+
+    <!-- Preconnect / Prefetch para rendimiento -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --bg-1: #0a0a0a;
+            --bg-2: #1a0a0a;
+            --accent-1: #ff0040;
+            --accent-2: #ff6600;
+            --muted: #b8a992;
+            --bord: #8b0000;
+            --glass: rgba(10,10,10,0.6);
+            --card-dark: linear-gradient(145deg,#1a0505,#0a0a0a);
+            --shadow-strong: 0 20px 60px rgba(0,0,0,0.9);
+        }
+
+        /* Reset moderno */
+        *,*::before,*::after{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family:'IM Fell English', serif;
+            background: linear-gradient(135deg,var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-1) 100%);
+            color: #e8d5c4;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            min-height:100vh;
+            position:relative;
+            overflow-x:hidden;
+        }
+
+        /* sutil overlay de color */
+        body::before{
+            content:"";
+            position:fixed; inset:0;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(139,0,0,0.06) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(74,123,167,0.06) 0%, transparent 45%);
+            pointer-events:none;
+            z-index:0;
+        }
+
+        .container{
+            max-width:1200px;
+            margin:0 auto;
+            padding:2rem;
+            position:relative;
+            z-index:1;
+        }
+
+        /* Header */
+        header.header{
+            text-align:center;
+            margin-bottom:2.5rem;
+            animation:fadeInDown .9s ease-out both;
+        }
+        .logo{
+            font-family:'Creepster',cursive;
+            color:var(--accent-1);
+            font-size:clamp(2.2rem,8vw,4.6rem);
+            text-shadow:
+                0 0 20px rgba(255,0,64,0.85),
+                0 0 40px rgba(139,0,0,0.6),
+                3px 3px 6px rgba(0,0,0,0.9);
+            letter-spacing:3px;
+            margin-bottom:.5rem;
+        }
+        .tagline{
+            font-size:clamp(1rem,2.6vw,1.25rem);
+            color:var(--muted);
+            font-style:italic;
+            text-shadow:2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* Countdown */
+        .countdown-section{
+            background:var(--glass);
+            border:3px solid var(--bord);
+            border-radius:20px;
+            padding:1.6rem;
+            margin-bottom:2.5rem;
+            box-shadow: 0 0 30px rgba(139,0,0,0.32), inset 0 0 20px rgba(0,0,0,0.45);
+            animation:fadeIn .9s ease-out both;
+        }
+        .countdown-title{
+            font-family:'Creepster',cursive;
+            color:var(--accent-2);
+            font-size:clamp(1.4rem,4vw,2.6rem);
+            text-align:center;
+            margin-bottom:1.4rem;
+            text-shadow:0 0 15px rgba(255,102,0,0.75);
+        }
+        .countdown-timer{
+            display:flex;
+            justify-content:center;
+            gap:1.2rem;
+            flex-wrap:wrap;
+        }
+        .time-unit{
+            background:var(--card-dark);
+            border:2px solid var(--bord);
+            border-radius:12px;
+            padding:1.2rem .9rem;
+            min-width:100px;
+            text-align:center;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.6), inset 0 2px 12px rgba(139,0,0,0.3);
+            transition: transform .24s ease, box-shadow .24s ease;
+        }
+        .time-unit:hover{ transform:translateY(-6px); box-shadow: 0 16px 36px rgba(139,0,0,0.45); }
+        .time-value{
+            display:block;
+            font-family:'Creepster',cursive;
+            color:var(--accent-1);
+            font-size:clamp(2rem,5.2vw,3.6rem);
+            text-shadow: 0 0 20px rgba(255,0,64,0.9), 0 0 40px rgba(139,0,0,0.6);
+            margin-bottom:.3rem;
+            line-height:1;
+        }
+        .time-label{
+            display:block;
+            font-size:.94rem;
+            color:var(--muted);
+            text-transform:uppercase;
+            letter-spacing:1.6px;
+        }
+
+        /* Book animation (mejor accesible y activable por teclado) */
+        .book-animation{ width:320px; height:320px; margin:2.25rem auto; position:relative; animation:fadeIn .9s ease-out both; }
+        .book{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; }
+        .book-cover{
+            width:190px; height:260px;
+            background: linear-gradient(145deg,#2d1810,#1a0f08);
+            border:4px solid #8b4513;
+            border-radius:8px;
+            display:flex; align-items:center; justify-content:center;
+            position:relative; cursor:pointer; transition:transform .3s ease; box-shadow:
+            0 10px 40px rgba(0,0,0,0.85), 0 20px 60px rgba(255,0,64,0.45), inset 0 0 40px rgba(139,0,0,0.45);
+            outline: none;
+        }
+        .book-cover:focus{ box-shadow: 0 20px 60px rgba(255,0,64,0.6), 0 10px 40px rgba(0,0,0,0.95); transform: translateY(-4px) scale(1.02); }
+        .book-cover.opening{ animation:bookOpen 1.4s ease-out forwards; }
+        @keyframes bookOpen{
+            0%{ transform:rotateY(0deg); }
+            50%{ transform:rotateY(-95deg); }
+            100%{ transform:rotateY(-180deg); opacity:0; transform-origin:center; }
+        }
+        .book-title{ font-family:'Creepster',cursive; font-size:1.8rem; color:var(--accent-1); text-align:center; text-shadow:0 0 10px rgba(255,0,64,0.8); padding:1rem; }
+        .skulls{ position:absolute; font-size:2.6rem; opacity:.28; pointer-events:none; }
+        .skull-1{ top:6%; left:8%; animation:skullFloat 3.2s ease-in-out infinite; }
+        .skull-2{ top:6%; right:8%; animation:skullFloat 3.2s ease-in-out infinite .6s; }
+        .skull-3{ bottom:8%; left:8%; animation:skullFloat 3.2s ease-in-out infinite 1.1s; }
+        .skull-4{ bottom:8%; right:8%; animation:skullFloat 3.2s ease-in-out infinite 1.6s; }
+        @keyframes skullFloat{ 0%,100%{ transform:translateY(0) rotate(0deg);} 50%{ transform:translateY(-12px) rotate(4deg);} }
+
+        /* CTA */
+        .cta-section{ margin:2.4rem 0; animation:fadeInUp .9s ease-out both; }
+        .cta-text{ text-align:center; font-size:clamp(1.05rem,3.2vw,1.6rem); color:#e8d5c4; margin-bottom:1.2rem; font-style:italic; text-shadow:2px 2px 6px rgba(0,0,0,0.9); }
+        .cta-button{
+            font-family:'Creepster',cursive;
+            display:inline-block;
+            background:linear-gradient(145deg,#8b0000,#ff0040);
+            color:#fff; border:3px solid var(--accent-1); border-radius:50px;
+            padding:1.1rem 2.2rem; font-size:clamp(1rem,3.4vw,1.6rem); cursor:pointer;
+            box-shadow:0 10px 30px rgba(255,0,64,0.4), inset 0 -5px 15px rgba(0,0,0,0.45);
+            text-transform:uppercase; letter-spacing:1.6px; transition:transform .24s ease, box-shadow .24s ease;
+        }
+        .cta-button:focus{ outline:3px solid rgba(255,0,64,0.25); }
+        .cta-button::before{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:0;height:0;border-radius:50%; background:rgba(255,255,255,0.12); transition:width .5s,height .5s; }
+        .cta-button:hover{ transform:translateY(-6px) scale(1.02); box-shadow:0 15px 40px rgba(255,0,64,0.5); }
+        .cta-button:hover::before{ width:280px;height:280px; }
+
+        /* Video */
+        .video-section{ display:none; animation:fadeInUp .8s ease-out; margin-top:1.6rem; }
+        .video-section.active{ display:block; }
+        .video-container{ position:relative; width:100%; max-width:900px; margin:0 auto 1.2rem; background:#000; border:4px solid var(--accent-1); border-radius:18px; overflow:hidden; box-shadow:0 0 40px rgba(255,0,64,0.5), var(--shadow-strong); }
+        .video-inner{ width:100%; height:0; padding-bottom:56.25%; position:relative; }
+        #player{ position:absolute; inset:0; width:100%; height:100%; }
+        .video-controls{ display:flex; gap:.8rem; justify-content:center; flex-wrap:wrap; }
+
+        .secondary-button{
+            font-family:'IM Fell English',serif;
+            background:rgba(74,123,167,0.18); color:#4a7ba7; border:2px solid #4a7ba7;
+            padding:.9rem 1.6rem; border-radius:30px; cursor:pointer; text-transform:uppercase; letter-spacing:1px;
+            transition:all .22s ease;
+        }
+        .secondary-button:hover{ transform:translateY(-4px); background:rgba(74,123,167,0.34); box-shadow:0 10px 20px rgba(74,123,167,0.18); }
+
+        /* Loading */
+        .loading{ text-align:center; color:var(--accent-1); font-size:1.1rem; padding:1.2rem; animation:pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse{ 0%,100%{ opacity:.6 } 50%{ opacity:1 } }
+
+        /* Animations */
+        @keyframes fadeInDown{ from{ opacity:0; transform:translateY(-22px)} to{ opacity:1; transform:none }}
+        @keyframes fadeInUp{ from{ opacity:0; transform:translateY(22px)} to{ opacity:1; transform:none }}
+        @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
+
+        /* Responsive */
+        @media (max-width:768px){
+            .time-unit{ min-width:84px; padding:.9rem .6rem; }
+            .book-animation{ width:260px; height:260px; }
+            .book-cover{ width:160px; height:220px; }
+        }
+
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce){
+            * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header" role="banner">
+            <h1 class="logo">Las Crónicas Malditas</h1>
+            <p class="tagline">Donde las historias oscuras cobran vida...</p>
+        </header>
+
+        <main id="main" role="main" aria-live="polite">
+            <!-- Countdown -->
+            <section class="countdown-section" aria-labelledby="countdownTitle">
+                <h2 id="countdownTitle" class="countdown-title">🎃 Cuenta Regresiva a Halloween 🎃</h2>
+
+                <div class="countdown-timer" role="group" aria-label="Cuenta regresiva hasta Halloween">
+                    <div class="time-unit" aria-hidden="false">
+                        <span class="time-value" id="days" aria-live="polite">00</span>
+                        <span class="time-label">Días</span>
+                    </div>
+                    <div class="time-unit" aria-hidden="false">
+                        <span class="time-value" id="hours" aria-live="polite">00</span>
+                        <span class="time-label">Horas</span>
+                    </div>
+                    <div class="time-unit" aria-hidden="false">
+                        <span class="time-value" id="minutes" aria-live="polite">00</span>
+                        <span class="time-label">Minutos</span>
+                    </div>
+                    <div class="time-unit" aria-hidden="false">
+                        <span class="time-value" id="seconds" aria-live="polite">00</span>
+                        <span class="time-label">Segundos</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Book animation (botón accesible) -->
+            <div class="book-animation">
+                <div class="book">
+                    <button id="bookCover" class="book-cover" aria-label="Abrir libro maldito" title="Abrir libro (Enter / Espacio)">
+                        <div class="book-title">Las Crónicas<br>Malditas</div>
+                    </button>
+
+                    <div class="skulls skull-1" aria-hidden="true">💀</div>
+                    <div class="skulls skull-2" aria-hidden="true">💀</div>
+                    <div class="skulls skull-3" aria-hidden="true">💀</div>
+                    <div class="skulls skull-4" aria-hidden="true">💀</div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <section class="cta-section" id="ctaSection">
+                <p class="cta-text">¿Te atreves a descubrir los secretos más oscuros?<br><em>Una historia te espera...</em></p>
+                <button id="ctaButton" class="cta-button" aria-pressed="false">⚰️ Revelar Historia Maldita ⚰️</button>
+            </section>
+
+            <!-- Video section -->
+            <section id="videoSection" class="video-section" aria-hidden="true">
+                <div class="video-container" aria-label="Reproductor de video">
+                    <div class="video-inner">
+                        <div id="player" class="video-player" role="region" aria-label="Reproductor de YouTube"></div>
+                    </div>
+                </div>
+
+                <div class="video-controls" role="toolbar" aria-label="Controles de vídeo">
+                    <button id="anotherVideoBtn" class="secondary-button">🔮 Otra Historia</button>
+                    <button id="backToStartBtn" class="secondary-button">📖 Volver al Inicio</button>
+                </div>
+            </section>
+        </main>
+
+        <footer role="contentinfo" style="margin-top:2.4rem;text-align:center;color:var(--muted);font-size:.9rem;">
+            © <span id="year"></span> Las Crónicas Malditas — Hecho con oscuridad y café.
+        </footer>
+    </div>
+
+    <!-- YouTube IFrame API (se carga solo al necesitar reproducir, para acelerar carga inicial) -->
+    <script>
+    // -------------------------------------------------------
+    // CONFIG (NO COMMIT: no dejes tus claves en el repo público)
+    // -------------------------------------------------------
+    // Opciones seguras:
+    // - Opción A (recomendado): no usar key en el cliente. Genera una API en tu servidor que devuelva una lista de IDs.
+    // - Opción B: si usas la API en cliente, define el valor en un archivo `config.js` no commiteado o en una variable de entorno del build.
+    //
+    // Si quieres probar rápido sin API, puedes crear una lista de VIDEO_IDS abajo.
+    // -------------------------------------------------------
+    const VIDEO_IDS = [
+        // Si quieres probar sin usar la API, pega aquí algunos IDs de vídeo (ej. 'dQw4w9WgXcQ')
+        // 'abcdefghijk',
+    ];
+
+    // Si vas a usar la YouTube Data API desde cliente, deja YOUTUBE_API_KEY vacío
+    // y pásalo desde tu servidor o desde un archivo privado.
+    const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
+
+    // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
+    // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
+    // then: const YOUTUBE_API_KEY = window.__YOUTUBE_API_KEY__ || '';
+    // -------------------------------------------------------
+
+    // -------------------------------------------------------
+    // UTIL: Conteo regresivo
+    // -------------------------------------------------------
+    function updateCountdown() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        // Octubre = 9 (0-based month index). Ajustado a las 00:00:00 del día 31 para empezar justo el día.
+        let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
+        if (now > halloween) halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
+
+        const diff = Math.max(0, halloween - now);
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        document.getElementById('days').textContent = String(days).padStart(2,'0');
+        document.getElementById('hours').textContent = String(hours).padStart(2,'0');
+        document.getElementById('minutes').textContent = String(minutes).padStart(2,'0');
+        document.getElementById('seconds').textContent = String(seconds).padStart(2,'0');
+    }
+    // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // -------------------------------------------------------
+    // YOUTUBE PLAYER + carga de IDs
+    // -------------------------------------------------------
+    let player = null;
+    let channelVideoIds = [...VIDEO_IDS]; // combinar posibles orígenes
+
+    // Cargar script de la IFrame API solo si el usuario solicita reproducir
+    let ytApiLoaded = false;
+    function ensureYouTubeIframeApi() {
+        if (ytApiLoaded) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = "https://www.youtube.com/iframe_api";
+            s.async = true;
+            s.onload = () => { /* la API llama a onYouTubeIframeAPIReady() cuando está lista */ resolve(); };
+            s.onerror = () => reject(new Error('No se pudo cargar la API de YouTube'));
+            document.body.appendChild(s);
+            ytApiLoaded = true;
+        });
+    }
+
+    // Si deseas usar la YouTube Data API desde cliente: se requiere YOUTUBE_API_KEY
+    async function loadChannelVideosFromApi(channelId, maxResults = 50) {
+        if (!YOUTUBE_API_KEY) {
+            console.warn('No se proporcionó API key para YouTube Data API. Omitiendo fetch.');
+            return;
+        }
+        try {
+            const resp = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${encodeURIComponent(YOUTUBE_API_KEY)}&channelId=${encodeURIComponent(channelId)}&part=snippet,id&order=date&maxResults=${maxResults}&type=video`);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            const ids = data.items?.map(i => i.id?.videoId).filter(Boolean);
+            if (ids?.length) {
+                channelVideoIds = Array.from(new Set([...channelVideoIds, ...ids]));
+                console.log(`Cargados ${ids.length} vídeos desde la API`);
+            }
+        } catch (err) {
+            console.warn('Error al cargar videos desde la API:', err);
+        }
+    }
+
+    // Función auxiliar: obtener un id aleatorio
+    function getRandomVideoId() {
+        if (!channelVideoIds || channelVideoIds.length === 0) return null;
+        return channelVideoIds[Math.floor(Math.random() * channelVideoIds.length)];
+    }
+
+    // Inicializar reproductor (cuando la API esté disponible)
+    function createPlayer() {
+        if (player) return;
+        player = new YT.Player('player', {
+            width: '100%',
+            height: '100%',
+            playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1 },
+            events: {
+                onReady: (e) => { /* listo */ },
+                onError: (e) => console.warn('YouTube player error', e)
+            }
+        });
+    }
+
+    // Called by the IFrame API when loaded
+    function onYouTubeIframeAPIReady() { // eslint-disable-line no-unused-vars
+        createPlayer();
+    }
+
+    async function playRandomVideo() {
+        // Si no hay IDs locales intentamos cargar desde la API (si tienes channelId y key)
+        if (!getRandomVideoId()) {
+            // Si defines CHANNEL_ID en la llamada, o mejor: llamar a un endpoint servidor para obtener IDs
+            // Aquí NO intento adivinar el channelId: el approach recomendado es proveer video IDs o usar servidor
+            console.warn('No hay videos listados en VIDEO_IDS y no se intentará fetch sin key/ID configurados.');
+            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o configura un servidor para obtenerlos.');
+            return;
+        }
+
+        try {
+            await ensureYouTubeIframeApi();
+            // Si la API llama a onYouTubeIframeAPIReady creará el player; sino, lo hacemos nosotros si ya está disponible
+            if (typeof YT !== 'undefined' && !player) createPlayer();
+            const vid = getRandomVideoId();
+            if (player && player.loadVideoById) {
+                player.loadVideoById(vid);
+            } else {
+                // fallback: crear el iframe manualmente
+                const iframe = document.createElement('iframe');
+                iframe.width = '100%';
+                iframe.height = '100%';
+                iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1`;
+                iframe.frameBorder = '0';
+                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                const playerDiv = document.getElementById('player');
+                playerDiv.innerHTML = '';
+                playerDiv.appendChild(iframe);
+            }
+
+            // Mostrar sección de video
+            document.getElementById('ctaSection').style.display = 'none';
+            const videoSection = document.getElementById('videoSection');
+            videoSection.classList.add('active');
+            videoSection.setAttribute('aria-hidden', 'false');
+        } catch (err) {
+            console.error('Error al reproducir vídeo:', err);
+            alert('No se pudo reproducir el vídeo. Revisa la consola para más detalles.');
+        }
+    }
+
+    // -------------------------------------------------------
+    // Interacciones y accesibilidad
+    // -------------------------------------------------------
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // elementos
+    const bookCover = document.getElementById('bookCover');
+    const ctaButton = document.getElementById('ctaButton');
+    const anotherVideoBtn = document.getElementById('anotherVideoBtn');
+    const backToStartBtn = document.getElementById('backToStartBtn');
+
+    // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
+    bookCover.addEventListener('click', () => {
+        // animación y luego revelar CTA
+        bookCover.classList.add('opening');
+        setTimeout(() => ctaButton.focus(), 900);
+    });
+
+    // CTA principal
+    ctaButton.addEventListener('click', async () => {
+        ctaButton.setAttribute('aria-pressed', 'true');
+        ctaButton.disabled = true;
+        const originalText = ctaButton.textContent;
+        ctaButton.textContent = '⏳ Cargando historia maldita...';
+
+        // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
+        // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
+        //
+        // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
+        // y descomenta la siguiente línea (y añade CHANNEL_ID):
+        // await loadChannelVideosFromApi(CHANNEL_ID);
+
+        // Reproducir (usa la lista VIDEO_IDS si la llenaste)
+        await playRandomVideo();
+
+        ctaButton.disabled = false;
+        ctaButton.textContent = originalText;
+        ctaButton.setAttribute('aria-pressed', 'false');
+    });
+
+    anotherVideoBtn.addEventListener('click', () => {
+        playRandomVideo();
+    });
+
+    backToStartBtn.addEventListener('click', () => {
+        const videoSection = document.getElementById('videoSection');
+        videoSection.classList.remove('active');
+        videoSection.setAttribute('aria-hidden', 'true');
+        document.getElementById('ctaSection').style.display = 'block';
+
+        // detener player si existe
+        if (player && player.stopVideo) {
+            try { player.stopVideo(); } catch (e) { /* ignore */ }
+        } else {
+            const playerDiv = document.getElementById('player');
+            playerDiv.innerHTML = '';
+        }
+
+        // reset animación del libro
+        bookCover.classList.remove('opening');
+        bookCover.focus();
+    });
+
+    // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
+    // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
+
+    // Si quieres pre-cargar la API sin reproducir, puedes llamar ensureYouTubeIframeApi() al inicio:
+    // ensureYouTubeIframeApi().catch(()=>{});
+    </script>
+</body>
+</html>
