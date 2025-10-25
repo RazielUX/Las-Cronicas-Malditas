@@ -1,9 +1,1 @@
-{
-  "name": "las-cronicas-malditas",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": "18.x"
-  }
-}
+{"name":"las-cronicas-malditas","version":"1.0.1","private":true,"type":"module","engines":{"node":"22.x"}}
