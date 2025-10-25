@@ -174,6 +174,7 @@
             padding:1.1rem 2.2rem; font-size:clamp(1rem,3.4vw,1.6rem); cursor:pointer;
             box-shadow:0 10px 30px rgba(255,0,64,0.4), inset 0 -5px 15px rgba(0,0,0,0.45);
             text-transform:uppercase; letter-spacing:1.6px; transition:transform .24s ease, box-shadow .24s ease;
+            position:relative;
         }
         .cta-button:focus{ outline:3px solid rgba(255,0,64,0.25); }
         .cta-button::before{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:0;height:0;border-radius:50%; background:rgba(255,255,255,0.12); transition:width .5s,height .5s; }
@@ -318,26 +319,42 @@
     // UTIL: Conteo regresivo
     // -------------------------------------------------------
     function updateCountdown() {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        // Octubre = 9 (0-based month index). Ajustado a las 00:00:00 del día 31 para empezar justo el día.
-        let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
-        if (now > halloween) halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
+        try {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            // Octubre = 9 (0-based month index). Ajustado a las 00:00:00 del día 31 para empezar justo el día.
+            let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
+            if (now > halloween) halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
 
-        const diff = Math.max(0, halloween - now);
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            const diff = Math.max(0, halloween - now);
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-        document.getElementById('countdownDays').textContent = String(days).padStart(2,'0');
-        document.getElementById('countdownHours').textContent = String(hours).padStart(2,'0');
-        document.getElementById('countdownMinutes').textContent = String(minutes).padStart(2,'0');
-        document.getElementById('countdownSeconds').textContent = String(seconds).padStart(2,'0');
+            const daysEl = document.getElementById('countdownDays');
+            const hoursEl = document.getElementById('countdownHours');
+            const minutesEl = document.getElementById('countdownMinutes');
+            const secondsEl = document.getElementById('countdownSeconds');
+
+            if (daysEl) daysEl.textContent = String(days).padStart(2,'0');
+            if (hoursEl) hoursEl.textContent = String(hours).padStart(2,'0');
+            if (minutesEl) minutesEl.textContent = String(minutes).padStart(2,'0');
+            if (secondsEl) secondsEl.textContent = String(seconds).padStart(2,'0');
+        } catch (err) {
+            console.error('Error actualizando contador:', err);
+        }
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        });
+    } else {
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    }
 
     // -------------------------------------------------------
     // YOUTUBE PLAYER + carga de IDs
@@ -449,20 +466,27 @@
     // -------------------------------------------------------
     // Interacciones y accesibilidad
     // -------------------------------------------------------
-    document.getElementById('year').textContent = new Date().getFullYear();
+    function initializeInteractions() {
+        const yearEl = document.getElementById('year');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-    // elementos
-    const bookCover = document.getElementById('bookCover');
-    const ctaButton = document.getElementById('ctaButton');
-    const anotherVideoBtn = document.getElementById('anotherVideoBtn');
-    const backToStartBtn = document.getElementById('backToStartBtn');
+        // elementos
+        const bookCover = document.getElementById('bookCover');
+        const ctaButton = document.getElementById('ctaButton');
+        const anotherVideoBtn = document.getElementById('anotherVideoBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
 
-    // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
-    bookCover.addEventListener('click', () => {
-        // animación y luego revelar CTA
-        bookCover.classList.add('opening');
-        setTimeout(() => ctaButton.focus(), 900);
-    });
+        if (!bookCover || !ctaButton || !anotherVideoBtn || !backToStartBtn) {
+            console.error('No se encontraron todos los elementos necesarios');
+            return;
+        }
+
+        // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
+        bookCover.addEventListener('click', () => {
+            // animación y luego revelar CTA
+            bookCover.classList.add('opening');
+            setTimeout(() => ctaButton.focus(), 900);
+        });
 
     // CTA principal
     ctaButton.addEventListener('click', async () => {
@@ -471,43 +495,66 @@
         const originalText = ctaButton.textContent;
         ctaButton.textContent = '⏳ Cargando historia maldita...';
 
-        // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
-        // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
-        //
-        // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
-        // y descomenta la siguiente línea (y añade CHANNEL_ID):
-        // await loadChannelVideosFromApi(CHANNEL_ID);
+        try {
+            // Cargar videos desde la API del servidor
+            if (channelVideoIds.length === 0) {
+                console.log('Cargando videos desde /api/videos...');
+                const response = await fetch('/api/videos');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.videoIds && data.videoIds.length > 0) {
+                        channelVideoIds = data.videoIds;
+                        console.log(`Cargados ${channelVideoIds.length} videos desde la API`);
+                    } else {
+                        console.warn('La API no devolvió videos');
+                    }
+                } else {
+                    console.error('Error al cargar videos:', response.status, response.statusText);
+                }
+            }
 
-        // Reproducir (usa la lista VIDEO_IDS si la llenaste)
-        await playRandomVideo();
-
-        ctaButton.disabled = false;
-        ctaButton.textContent = originalText;
-        ctaButton.setAttribute('aria-pressed', 'false');
+            // Reproducir (usa la lista VIDEO_IDS si la llenaste)
+            await playRandomVideo();
+        } catch (err) {
+            console.error('Error en CTA:', err);
+            alert('Hubo un error al cargar los videos. Por favor revisa la consola.');
+        } finally {
+            ctaButton.disabled = false;
+            ctaButton.textContent = originalText;
+            ctaButton.setAttribute('aria-pressed', 'false');
+        }
     });
 
     anotherVideoBtn.addEventListener('click', () => {
         playRandomVideo();
     });
 
-    backToStartBtn.addEventListener('click', () => {
-        const videoSection = document.getElementById('videoSection');
-        videoSection.classList.remove('active');
-        videoSection.setAttribute('aria-hidden', 'true');
-        document.getElementById('ctaSection').style.display = 'block';
+        backToStartBtn.addEventListener('click', () => {
+            const videoSection = document.getElementById('videoSection');
+            videoSection.classList.remove('active');
+            videoSection.setAttribute('aria-hidden', 'true');
+            document.getElementById('ctaSection').style.display = 'block';
 
-        // detener player si existe
-        if (player && player.stopVideo) {
-            try { player.stopVideo(); } catch (e) { /* ignore */ }
-        } else {
-            const playerDiv = document.getElementById('player');
-            playerDiv.innerHTML = '';
-        }
+            // detener player si existe
+            if (player && player.stopVideo) {
+                try { player.stopVideo(); } catch (e) { /* ignore */ }
+            } else {
+                const playerDiv = document.getElementById('player');
+                playerDiv.innerHTML = '';
+            }
 
-        // reset animación del libro
-        bookCover.classList.remove('opening');
-        bookCover.focus();
-    });
+            // reset animación del libro
+            bookCover.classList.remove('opening');
+            bookCover.focus();
+        });
+    }
+
+    // Inicializar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeInteractions);
+    } else {
+        initializeInteractions();
+    }
 
     // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
     // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
