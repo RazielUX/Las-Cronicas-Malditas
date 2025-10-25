@@ -479,7 +479,7 @@
     }
 
     async function fetchVideosFromServer() {
-        if (disableApiFetch) return;
+        if (disableApiFetch) return false;
         try {
             const query = new URLSearchParams();
             if (channelIdHint) query.set('channelId', channelIdHint);
@@ -511,6 +511,7 @@
                     'error'
                 );
             }
+            return channelVideoIds.length > 0;
         } catch (err) {
             console.warn('No se pudieron obtener vídeos desde /api/videos:', err);
             setCtaStatus(
@@ -518,13 +519,38 @@
                     'No se pudieron cargar las historias. Verifica en Vercel que YT_API_KEY y CHANNEL_ID estén configurados, o añade IDs manuales en el archivo.',
                 'error'
             );
+            return false;
         }
     }
 
-    async function ensureVideoIdsAvailable() {
+    async function ensureVideoIdsAvailable(trigger = 'manual') {
         if (channelVideoIds.length > 0) return true;
 
-        await fetchVideosFromServer();
+        let success = false;
+
+        if (!disableApiFetch) {
+            if (trigger === 'cta' || trigger === 'secondary') {
+                setCtaStatus(
+                    CLIENT_CONFIG.loadingMessage ||
+                        'Invocando historias desde tu servidor...'
+                );
+            }
+            success = await fetchVideosFromServer();
+            if (success && channelVideoIds.length > 0) {
+                return true;
+            }
+        }
+
+        if (channelIdHint && YOUTUBE_API_KEY) {
+            await loadChannelVideosFromApi(channelIdHint);
+            if (channelVideoIds.length > 0) {
+                setCtaStatus(
+                    CLIENT_CONFIG.readyMessage ||
+                        'Historias malditas listas. Cuando quieras, pulsa el botón.'
+                );
+                return true;
+            }
+        }
 
         return channelVideoIds.length > 0;
     }
@@ -556,12 +582,17 @@
 
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
-    async function playRandomVideo() {
-        if (!(await ensureVideoIdsAvailable())) {
-            console.warn('No hay videos disponibles todavía. Añade IDs manuales o verifica la API.');
-            setCtaStatus('Sigue sin haber historias disponibles. Revisa tu configuración o intenta de nuevo en unos segundos.', 'error');
-            alert('No se encontraron videos. Añade algunos IDs a STATIC_VIDEO_IDS o verifica tu endpoint /api/videos.');
-            return;
+    async function playRandomVideo(trigger = 'cta') {
+        const ready = await ensureVideoIdsAvailable(trigger);
+        if (!ready) {
+            console.warn('No hay videos disponibles tras los intentos de carga.');
+            setCtaStatus(
+                CLIENT_CONFIG.missingVideoMessage ||
+                    'No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.',
+                'error'
+            );
+            alert('No se encontraron videos disponibles. Revisa tu configuración e inténtalo de nuevo.');
+            return false;
         }
 
         try {
@@ -573,7 +604,7 @@
                 console.warn('No se pudo seleccionar un video aleatorio.');
                 setCtaStatus('No se pudo seleccionar ninguna historia. Intenta de nuevo.', 'error');
                 alert('No se pudo seleccionar un video. Intenta de nuevo en unos segundos.');
-                return;
+                return false;
             }
             if (player && player.loadVideoById) {
                 player.loadVideoById(vid);
@@ -605,10 +636,12 @@
                 videoSection.setAttribute('aria-hidden', 'false');
             }
             setCtaStatus('Historia maldita invocada. ¡Disfruta del terror!');
+            return true;
         } catch (err) {
             console.error('Error al reproducir vídeo:', err);
             setCtaStatus('No se pudo reproducir el vídeo. Revisa la consola o tu configuración y vuelve a intentar.', 'error');
             alert('No se pudo reproducir el vídeo. Revisa la consola para más detalles.');
+            return false;
         }
     }
 
@@ -656,7 +689,7 @@
             // await loadChannelVideosFromApi(CHANNEL_ID);
 
             // Reproducir (usa la lista STATIC_VIDEO_IDS si la llenaste)
-            await playRandomVideo();
+            await playRandomVideo('cta');
 
             ctaButton.disabled = false;
             ctaButton.textContent = originalText;
@@ -669,7 +702,7 @@
     if (anotherVideoBtn) {
         anotherVideoBtn.addEventListener('click', () => {
             setCtaStatus('Invocando otra historia maldita...');
-            playRandomVideo();
+            playRandomVideo('secondary');
         });
     }
 

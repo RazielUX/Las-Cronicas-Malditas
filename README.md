@@ -8,7 +8,7 @@ Resumen
 
 Archivos de ejemplo incluidos
 - /api/videos.js — función serverless para Vercel (igual idea para Netlify).
-- index.html — tu página (añade el snippet `fetchVideosFromServer()` antes de llamar a playRandomVideo()).
+- index.html — tu página (el CTA vuelve a pedir IDs si la precarga falla para que la interacción no quede rota).
 - .gitignore — evita subir archivos de configuración privados.
 
 Configuración — Vercel (recomendada)
@@ -40,6 +40,7 @@ Configuraciones rápidas desde el HTML
 - Si quieres evitar dependencias del endpoint mientras haces pruebas, abre `index.html` y añade IDs en el array `STATIC_VIDEO_IDS`.
 - Alternativamente, antes del `<script>` principal define `window.__LASCronicasConfig = { videoIds: ['abc123'], channelId: 'UC...' }` para cargar IDs personalizados o pasar `channelId`/`maxResults` sin editar el archivo principal.
 - Si estableces `window.__LASCronicasConfig.disableApi = true`, el botón CTA solo usará los IDs manuales (útil si no configurarás `/api/videos`).
+- Si el preload inicial falla, el CTA intentará invocar `/api/videos` otra vez cuando lo pulses, y mostrará mensajes de estado claros si sigue sin encontrar IDs.
 
 Si quieres, preparo:
 - 1) Un `config.example.js` para el caso en que **temporalmente** pruebes con una key en local (no commiteada).
