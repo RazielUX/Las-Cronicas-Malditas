@@ -217,7 +217,7 @@
             * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
         }
     </style>
-</head>
+</head>fetch('/api/videos') .then(async r => { console.log('status', r.status, 'ct', r.headers.get('content-type')); console.log(await r.text()); }) .catch(e => console.error('fetch error', e));
 <body>
     <div class="container">
         <header class="header" role="banner">
