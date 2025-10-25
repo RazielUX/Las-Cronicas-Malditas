@@ -1,0 +1,6 @@
+# Evita subir archivos con claves o configuración local
+/config.js
+*.env
+.env.local
+/.vercel
+/.netlify
