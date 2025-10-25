@@ -1,7 +1,3 @@
-// Versión segura y comprobada de api/videos.js (CommonJS).
-// Pega esto en GitHub > repo > api/videos.js (Edit) y Commit directamente a main.
-// Después redeploy en Vercel.
-
 module.exports = async function handler(req, res) {
   try {
     const YT_KEY = process.env.YT_API_KEY || '';
