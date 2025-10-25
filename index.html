@@ -529,15 +529,24 @@
                 iframe.frameBorder = '0';
                 iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
                 const playerDiv = document.getElementById('player');
-                playerDiv.innerHTML = '';
-                playerDiv.appendChild(iframe);
+                if (playerDiv) {
+                    playerDiv.innerHTML = '';
+                    playerDiv.appendChild(iframe);
+                } else {
+                    throw new Error('No se encontró el contenedor del reproductor');
+                }
             }
 
             // Mostrar sección de video
-            document.getElementById('ctaSection').style.display = 'none';
+            const ctaSection = document.getElementById('ctaSection');
+            if (ctaSection) {
+                ctaSection.style.display = 'none';
+            }
             const videoSection = document.getElementById('videoSection');
-            videoSection.classList.add('active');
-            videoSection.setAttribute('aria-hidden', 'false');
+            if (videoSection) {
+                videoSection.classList.add('active');
+                videoSection.setAttribute('aria-hidden', 'false');
+            }
             setCtaStatus('Historia maldita invocada. ¡Disfruta del terror!');
         } catch (err) {
             console.error('Error al reproducir vídeo:', err);
@@ -549,7 +558,10 @@
     // -------------------------------------------------------
     // Interacciones y accesibilidad
     // -------------------------------------------------------
-    document.getElementById('year').textContent = new Date().getFullYear();
+    const yearEl = document.getElementById('year');
+    if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+    }
 
     // elementos
     const bookCover = document.getElementById('bookCover');
@@ -558,59 +570,80 @@
     const backToStartBtn = document.getElementById('backToStartBtn');
 
     // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
-    bookCover.addEventListener('click', () => {
-        // animación y luego revelar CTA
-        bookCover.classList.add('opening');
-        setTimeout(() => ctaButton.focus(), 900);
-    });
+    if (bookCover) {
+        bookCover.addEventListener('click', () => {
+            // animación y luego revelar CTA
+            bookCover.classList.add('opening');
+            if (ctaButton) {
+                setTimeout(() => ctaButton.focus(), 900);
+            }
+        });
+    } else {
+        console.warn('No se encontró el botón del libro. Verifica el marcado.');
+    }
 
     // CTA principal
-    ctaButton.addEventListener('click', async () => {
-        ctaButton.setAttribute('aria-pressed', 'true');
-        ctaButton.disabled = true;
-        const originalText = ctaButton.textContent;
-        ctaButton.textContent = '⏳ Cargando historia maldita...';
-        setCtaStatus('Buscando historias malditas...');
+    if (ctaButton) {
+        ctaButton.addEventListener('click', async () => {
+            ctaButton.setAttribute('aria-pressed', 'true');
+            ctaButton.disabled = true;
+            const originalText = ctaButton.textContent;
+            ctaButton.textContent = '⏳ Cargando historia maldita...';
+            setCtaStatus('Buscando historias malditas...');
 
-        // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
-        // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
-        //
-        // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
-        // y descomenta la siguiente línea (y añade CHANNEL_ID):
-        // await loadChannelVideosFromApi(CHANNEL_ID);
+            // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
+            // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
+            //
+            // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
+            // y descomenta la siguiente línea (y añade CHANNEL_ID):
+            // await loadChannelVideosFromApi(CHANNEL_ID);
 
-        // Reproducir (usa la lista VIDEO_IDS si la llenaste)
-        await playRandomVideo();
+            // Reproducir (usa la lista VIDEO_IDS si la llenaste)
+            await playRandomVideo();
 
-        ctaButton.disabled = false;
-        ctaButton.textContent = originalText;
-        ctaButton.setAttribute('aria-pressed', 'false');
-    });
+            ctaButton.disabled = false;
+            ctaButton.textContent = originalText;
+            ctaButton.setAttribute('aria-pressed', 'false');
+        });
+    } else {
+        console.warn('No se encontró el botón CTA. Asegúrate de conservar el id="ctaButton".');
+    }
 
-    anotherVideoBtn.addEventListener('click', () => {
-        setCtaStatus('Invocando otra historia maldita...');
-        playRandomVideo();
-    });
+    if (anotherVideoBtn) {
+        anotherVideoBtn.addEventListener('click', () => {
+            setCtaStatus('Invocando otra historia maldita...');
+            playRandomVideo();
+        });
+    }
 
-    backToStartBtn.addEventListener('click', () => {
-        const videoSection = document.getElementById('videoSection');
-        videoSection.classList.remove('active');
-        videoSection.setAttribute('aria-hidden', 'true');
-        document.getElementById('ctaSection').style.display = 'block';
+    if (backToStartBtn) {
+        backToStartBtn.addEventListener('click', () => {
+            const videoSection = document.getElementById('videoSection');
+            if (videoSection) {
+                videoSection.classList.remove('active');
+                videoSection.setAttribute('aria-hidden', 'true');
+            }
+            const ctaSection = document.getElementById('ctaSection');
+            if (ctaSection) {
+                ctaSection.style.display = 'block';
+            }
 
-        // detener player si existe
-        if (player && player.stopVideo) {
-            try { player.stopVideo(); } catch (e) { /* ignore */ }
-        } else {
-            const playerDiv = document.getElementById('player');
-            playerDiv.innerHTML = '';
-        }
+            // detener player si existe
+            if (player && player.stopVideo) {
+                try { player.stopVideo(); } catch (e) { /* ignore */ }
+            } else {
+                const playerDiv = document.getElementById('player');
+                if (playerDiv) playerDiv.innerHTML = '';
+            }
 
-        // reset animación del libro
-        bookCover.classList.remove('opening');
-        bookCover.focus();
-        setCtaStatus('Cuando quieras, vuelve a invocar una historia maldita.');
-    });
+            // reset animación del libro
+            if (bookCover) {
+                bookCover.classList.remove('opening');
+                bookCover.focus();
+            }
+            setCtaStatus('Cuando quieras, vuelve a invocar una historia maldita.');
+        });
+    }
 
     // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
     // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
