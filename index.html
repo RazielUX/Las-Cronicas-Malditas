@@ -348,133 +348,119 @@
     const autoFetchEnabled = CLIENT_CONFIG.fetchOnLoad !== false;
     const disableApiFetch = CLIENT_CONFIG.disableApi === true;
 
-    // Countdown resiliente: detecta nodos por data-countdown o IDs heredados y
-    // acepta `data-countdown-target` con valores como "halloween", "10-31" o
-    // una fecha ISO para personalizar el objetivo del conteo.
-    const countdownSelectors = {
-        days: ['[data-countdown="days"]', '#countdownDays', '#days'],
-        hours: ['[data-countdown="hours"]', '#countdownHours', '#hours'],
-        minutes: ['[data-countdown="minutes"]', '#countdownMinutes', '#minutes'],
-        seconds: ['[data-countdown="seconds"]', '#countdownSeconds', '#seconds']
+    // Countdown simple y robusto que siempre apunta al próximo Halloween
+    // salvo que se defina manualmente otro objetivo mediante
+    // `data-countdown-target` (acepta "halloween", fechas MM-DD, DD/MM o ISO).
+    const countdownResolvers = {
+        days: () =>
+            document.querySelector('[data-countdown="days"]') ||
+            document.getElementById('countdownDays') ||
+            document.getElementById('days'),
+        hours: () =>
+            document.querySelector('[data-countdown="hours"]') ||
+            document.getElementById('countdownHours') ||
+            document.getElementById('hours'),
+        minutes: () =>
+            document.querySelector('[data-countdown="minutes"]') ||
+            document.getElementById('countdownMinutes') ||
+            document.getElementById('minutes'),
+        seconds: () =>
+            document.querySelector('[data-countdown="seconds"]') ||
+            document.getElementById('countdownSeconds') ||
+            document.getElementById('seconds')
     };
-    const countdownElementCache = {};
+    const countdownNodes = {};
     let countdownIntervalId = null;
-    let countdownMissingWarned = false;
-    let countdownInvalidTargetWarned = false;
-    let countdownTargetState = { token: null, rawValue: null, date: null, repeats: true };
+    let countdownWarnedOnce = false;
 
-    function findCountdownElement(key) {
-        const cached = countdownElementCache[key];
+    function getCountdownRoot() {
+        return document.querySelector('[data-countdown-target]');
+    }
+
+    function resolveCountdownNode(key) {
+        const cached = countdownNodes[key];
         if (cached && document.contains(cached)) {
             return cached;
         }
-
-        const selectors = countdownSelectors[key] || [];
-        for (const selector of selectors) {
-            const el = document.querySelector(selector);
-            if (el) {
-                countdownElementCache[key] = el;
-                return el;
-            }
+        const node = countdownResolvers[key] ? countdownResolvers[key]() : null;
+        if (node) {
+            countdownNodes[key] = node;
         }
-        return null;
+        return node;
     }
 
-    function setCountdownSegment(key, value) {
-        const el = findCountdownElement(key);
-        if (!el) return false;
-        el.textContent = value;
+    function writeCountdown(key, value) {
+        const node = resolveCountdownNode(key);
+        if (!node) return false;
+        node.textContent = value;
         return true;
     }
 
-    function computeHalloweenTarget(now = new Date()) {
-        const target = new Date(now.getFullYear(), 9, 31, 23, 59, 59, 999);
+    function pad2(value) {
+        return String(value).padStart(2, '0');
+    }
+
+    function nextRecurringDate(now, monthIndex, day, hour = 0, minute = 0, second = 0) {
+        const target = new Date(now.getFullYear(), monthIndex, day, hour, minute, second, 0);
         if (target <= now) {
             target.setFullYear(target.getFullYear() + 1);
         }
         return target;
     }
 
-    function parseCountdownTarget(now, rawValue) {
-        const fallback = { date: computeHalloweenTarget(now), repeats: true };
-        if (rawValue == null) {
-            return fallback;
+    function parseTarget(now, rawValue) {
+        if (!rawValue || rawValue.toLowerCase() === 'halloween') {
+            return nextRecurringDate(now, 9, 31);
         }
 
-        const value = rawValue.trim();
-        if (!value) {
-            return fallback;
+        const trimmed = rawValue.trim();
+        if (!trimmed) {
+            return nextRecurringDate(now, 9, 31);
         }
 
-        if (value.toLowerCase() === 'halloween') {
-            return fallback;
-        }
-
-        const isoCandidate = new Date(value);
+        const isoCandidate = new Date(trimmed);
         if (!Number.isNaN(isoCandidate.getTime())) {
-            return { date: isoCandidate, repeats: false };
+            return isoCandidate <= now ? now : isoCandidate;
         }
 
-        const match = value.match(/^([0-9]{1,2})[\/-]([0-9]{1,2})(?:[ T]([0-9]{1,2})(?::([0-9]{2})(?::([0-9]{2}))?)?)?$/);
-        if (match) {
-            const month = Number.parseInt(match[1], 10) - 1;
-            const day = Number.parseInt(match[2], 10);
-            const hour = match[3] !== undefined ? Number.parseInt(match[3], 10) : 0;
-            const minute = match[4] !== undefined ? Number.parseInt(match[4], 10) : 0;
-            const second = match[5] !== undefined ? Number.parseInt(match[5], 10) : 0;
-            if (!Number.isNaN(month) && !Number.isNaN(day)) {
-                let target = new Date(now.getFullYear(), month, day, hour, minute, second, 999);
-                if (target <= now) {
-                    target.setFullYear(target.getFullYear() + 1);
-                }
-                return { date: target, repeats: true };
+        const shortMatch = trimmed.match(/^([0-9]{1,2})[\/-]([0-9]{1,2})(?:[ T]([0-9]{1,2})(?::([0-9]{2})(?::([0-9]{2}))?)?)?$/);
+        if (shortMatch) {
+            const first = Number.parseInt(shortMatch[1], 10);
+            const second = Number.parseInt(shortMatch[2], 10);
+            const hour = shortMatch[3] !== undefined ? Number.parseInt(shortMatch[3], 10) : 0;
+            const minute = shortMatch[4] !== undefined ? Number.parseInt(shortMatch[4], 10) : 0;
+            const secondPart = shortMatch[5] !== undefined ? Number.parseInt(shortMatch[5], 10) : 0;
+
+            // Interpretación flexible: si el valor parece MM-DD úsalo tal cual;
+            // si el primer número es > 12 asumimos formato DD-MM.
+            let monthIndex = first - 1;
+            let day = second;
+            if (first > 12) {
+                monthIndex = second - 1;
+                day = first;
             }
+
+            const candidate = nextRecurringDate(now, monthIndex, day, hour, minute, secondPart);
+            return candidate;
         }
 
-        if (!countdownInvalidTargetWarned) {
-            console.warn(`No se pudo interpretar el data-countdown-target="${value}". Usando Halloween por defecto.`);
-            countdownInvalidTargetWarned = true;
+        if (!countdownWarnedOnce) {
+            console.warn(`No se pudo interpretar data-countdown-target="${trimmed}". Usando Halloween por defecto.`);
+            countdownWarnedOnce = true;
         }
-        return fallback;
+        return nextRecurringDate(now, 9, 31);
     }
 
-    function getCountdownTargetState(now = new Date()) {
-        const holder = document.querySelector('[data-countdown-target]');
-        const rawValue = holder ? holder.getAttribute('data-countdown-target') : null;
-        const token = rawValue === null ? '__default__' : rawValue;
-
-        if (countdownTargetState.token !== token) {
-            countdownInvalidTargetWarned = false;
-        }
-
-        if (
-            countdownTargetState.token !== token ||
-            !countdownTargetState.date ||
-            (countdownTargetState.repeats && countdownTargetState.date <= now)
-        ) {
-            const { date, repeats } = parseCountdownTarget(now, rawValue);
-            countdownTargetState = { token, rawValue, date, repeats };
-        }
-
-        return countdownTargetState;
+    function computeCountdownTarget(now = new Date()) {
+        const root = getCountdownRoot();
+        const raw = root ? root.getAttribute('data-countdown-target') : null;
+        return parseTarget(now, raw);
     }
 
-    function formatCountdownSegment(value) {
-        return String(value).padStart(2, '0');
-    }
-
-    // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
-    // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
-    // then: const YOUTUBE_API_KEY = window.__YOUTUBE_API_KEY__ || '';
-    // -------------------------------------------------------
-
-    // -------------------------------------------------------
-    // UTIL: Conteo regresivo
-    // -------------------------------------------------------
     function updateCountdown() {
         const now = new Date();
-        const targetState = getCountdownTargetState(now);
-        let diff = targetState.date - now;
+        const target = computeCountdownTarget(now);
+        let diff = target - now;
         if (diff < 0) diff = 0;
 
         const totalSeconds = Math.floor(diff / 1000);
@@ -483,29 +469,16 @@
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
 
-        const updatedSegments = [
-            setCountdownSegment('days', formatCountdownSegment(days)),
-            setCountdownSegment('hours', formatCountdownSegment(hours)),
-            setCountdownSegment('minutes', formatCountdownSegment(minutes)),
-            setCountdownSegment('seconds', formatCountdownSegment(seconds))
-        ];
+        const wroteAny = [
+            writeCountdown('days', pad2(days)),
+            writeCountdown('hours', pad2(hours)),
+            writeCountdown('minutes', pad2(minutes)),
+            writeCountdown('seconds', pad2(seconds))
+        ].some(Boolean);
 
-        const wroteAny = updatedSegments.some(Boolean);
-        if (!wroteAny && !countdownMissingWarned) {
-            countdownMissingWarned = true;
-            console.warn('Elementos del contador no encontrados; verifica el marcado del contador.');
-        } else if (wroteAny) {
-            countdownMissingWarned = false;
-        }
-
-        if (diff === 0 && targetState.repeats) {
-            const nextState = parseCountdownTarget(new Date(now.getTime() + 1000), targetState.rawValue);
-            countdownTargetState = {
-                token: targetState.token,
-                rawValue: targetState.rawValue,
-                date: nextState.date,
-                repeats: nextState.repeats
-            };
+        if (!wroteAny && !countdownWarnedOnce) {
+            countdownWarnedOnce = true;
+            console.warn('Elementos del contador no encontrados. Verifica el marcado del contador.');
         }
     }
 
