@@ -348,10 +348,18 @@
     const autoFetchEnabled = CLIENT_CONFIG.fetchOnLoad !== false;
     const disableApiFetch = CLIENT_CONFIG.disableApi === true;
 
-    const countdownDaysEl = document.getElementById('countdownDays');
-    const countdownHoursEl = document.getElementById('countdownHours');
-    const countdownMinutesEl = document.getElementById('countdownMinutes');
-    const countdownSecondsEl = document.getElementById('countdownSeconds');
+    const countdownDaysEl =
+        document.getElementById('countdownDays') ||
+        document.getElementById('days');
+    const countdownHoursEl =
+        document.getElementById('countdownHours') ||
+        document.getElementById('hours');
+    const countdownMinutesEl =
+        document.getElementById('countdownMinutes') ||
+        document.getElementById('minutes');
+    const countdownSecondsEl =
+        document.getElementById('countdownSeconds') ||
+        document.getElementById('seconds');
 
     // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
     // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
@@ -380,8 +388,17 @@
         if (countdownSecondsEl) countdownSecondsEl.textContent = String(seconds).padStart(2,'0');
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
+    if (
+        countdownDaysEl &&
+        countdownHoursEl &&
+        countdownMinutesEl &&
+        countdownSecondsEl
+    ) {
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    } else {
+        console.warn('Elementos del contador no encontrados; verifica el marcado de countdown.');
+    }
 
     // -------------------------------------------------------
     // YOUTUBE PLAYER + carga de IDs
@@ -393,7 +410,7 @@
                 .filter(id => typeof id === 'string' && id.trim())
         )
     );
-    const ctaStatus = document.getElementById('ctaStatus');
+    const ctaStatus = document.getElementById('ctaStatus') || document.querySelector('.cta-status');
 
     function setCtaStatus(message, tone = 'info') {
         if (!ctaStatus) return;
@@ -654,10 +671,10 @@
     }
 
     // elementos
-    const bookCover = document.getElementById('bookCover');
-    const ctaButton = document.getElementById('ctaButton');
-    const anotherVideoBtn = document.getElementById('anotherVideoBtn');
-    const backToStartBtn = document.getElementById('backToStartBtn');
+    const bookCover = document.getElementById('bookCover') || document.querySelector('.book-cover');
+    const ctaButton = document.getElementById('ctaButton') || document.querySelector('.cta-button');
+    const anotherVideoBtn = document.getElementById('anotherVideoBtn') || document.querySelector('[data-action="another-video"]');
+    const backToStartBtn = document.getElementById('backToStartBtn') || document.querySelector('[data-action="back-to-start"]');
 
     // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
     if (bookCover) {
