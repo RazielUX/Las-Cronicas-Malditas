@@ -180,6 +180,16 @@
         .cta-button:hover{ transform:translateY(-6px) scale(1.02); box-shadow:0 15px 40px rgba(255,0,64,0.5); }
         .cta-button:hover::before{ width:280px;height:280px; }
 
+        .cta-status{
+            margin-top:1rem;
+            text-align:center;
+            font-size:clamp(.95rem,2.6vw,1.1rem);
+            color:var(--muted);
+            min-height:1.2em;
+        }
+        .cta-status strong{ color:var(--accent-2); }
+        .cta-status.error{ color:var(--accent-1); }
+
         /* Video */
         .video-section{ display:none; animation:fadeInUp .8s ease-out; margin-top:1.6rem; }
         .video-section.active{ display:block; }
@@ -217,7 +227,7 @@
             * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
         }
     </style>
-</head>fetch('/api/videos') .then(async r => { console.log('status', r.status, 'ct', r.headers.get('content-type')); console.log(await r.text()); }) .catch(e => console.error('fetch error', e));
+</head>
 <body>
     <div class="container">
         <header class="header" role="banner">
@@ -230,22 +240,22 @@
             <section class="countdown-section" aria-labelledby="countdownTitle">
                 <h2 id="countdownTitle" class="countdown-title">🎃 Cuenta Regresiva a Halloween 🎃</h2>
 
-               <div class="time-unit">
-    <div class="time-value" id="countdownDays">00</div>
-    <span class="time-label">Días</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownHours">00</div>
-    <span class="time-label">Horas</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownMinutes">00</div>
-    <span class="time-label">Minutos</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownSeconds">00</div>
-    <span class="time-label">Segundos</span>
-</div>
+                <div class="countdown-timer" role="timer" aria-live="polite">
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownDays">00</div>
+                        <span class="time-label">Días</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownHours">00</div>
+                        <span class="time-label">Horas</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownMinutes">00</div>
+                        <span class="time-label">Minutos</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownSeconds">00</div>
+                        <span class="time-label">Segundos</span>
                     </div>
                 </div>
             </section>
@@ -269,6 +279,8 @@
                 <p class="cta-text">¿Te atreves a descubrir los secretos más oscuros?<br><em>Una historia te espera...</em></p>
                 <button id="ctaButton" class="cta-button" aria-pressed="false">⚰️ Revelar Historia Maldita ⚰️</button>
             </section>
+
+            <p id="ctaStatus" class="cta-status" role="status" aria-live="polite"></p>
 
             <!-- Video section -->
             <section id="videoSection" class="video-section" aria-hidden="true">
@@ -310,6 +322,19 @@
     // y pásalo desde tu servidor o desde un archivo privado.
     const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
 
+    const countdownElements = {
+        days: document.getElementById('countdownDays'),
+        hours: document.getElementById('countdownHours'),
+        minutes: document.getElementById('countdownMinutes'),
+        seconds: document.getElementById('countdownSeconds'),
+    };
+
+    function setCountdownValue(key, value) {
+        if (countdownElements[key]) {
+            countdownElements[key].textContent = value;
+        }
+    }
+
     // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
     // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
     // then: const YOUTUBE_API_KEY = window.__YOUTUBE_API_KEY__ || '';
@@ -331,10 +356,10 @@
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-        document.getElementById('days').textContent = String(days).padStart(2,'0');
-        document.getElementById('hours').textContent = String(hours).padStart(2,'0');
-        document.getElementById('minutes').textContent = String(minutes).padStart(2,'0');
-        document.getElementById('seconds').textContent = String(seconds).padStart(2,'0');
+        setCountdownValue('days', String(days).padStart(2,'0'));
+        setCountdownValue('hours', String(hours).padStart(2,'0'));
+        setCountdownValue('minutes', String(minutes).padStart(2,'0'));
+        setCountdownValue('seconds', String(seconds).padStart(2,'0'));
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
     updateCountdown();
@@ -344,7 +369,18 @@
     // YOUTUBE PLAYER + carga de IDs
     // -------------------------------------------------------
     let player = null;
-    let channelVideoIds = [...VIDEO_IDS]; // combinar posibles orígenes
+    let channelVideoIds = VIDEO_IDS.filter(id => typeof id === 'string' && id.trim()); // combinar posibles orígenes
+    const ctaStatus = document.getElementById('ctaStatus');
+
+    function setCtaStatus(message, tone = 'info') {
+        if (!ctaStatus) return;
+        ctaStatus.textContent = message;
+        ctaStatus.classList.toggle('error', tone === 'error');
+    }
+
+    if (channelVideoIds.length) {
+        setCtaStatus('Historias malditas listas. Cuando quieras, pulsa el botón.');
+    }
 
     // Cargar script de la IFrame API solo si el usuario solicita reproducir
     let ytApiLoaded = false;
@@ -381,6 +417,40 @@
         }
     }
 
+    async function fetchVideosFromServer() {
+        try {
+            const resp = await fetch('/api/videos');
+            const payload = resp.headers.get('content-type')?.includes('application/json') ? await resp.json() : null;
+            if (!resp.ok) {
+                const serverMessage = payload?.error || payload?.message;
+                throw new Error(serverMessage || `HTTP ${resp.status}`);
+            }
+            const data = payload ?? {};
+            const newIds = (data?.videoIds || []).filter(id => typeof id === 'string' && id.trim());
+            if (newIds.length) {
+                channelVideoIds = Array.from(new Set([...channelVideoIds, ...newIds]));
+                console.log(`Cargados ${newIds.length} vídeos desde el servidor`);
+            }
+
+            if (channelVideoIds.length) {
+                setCtaStatus('Historias malditas listas. Cuando quieras, pulsa el botón.');
+            } else {
+                setCtaStatus('No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.', 'error');
+            }
+        } catch (err) {
+            console.warn('No se pudieron obtener vídeos desde /api/videos:', err);
+            setCtaStatus('No se pudieron cargar las historias. Verifica en Vercel que YT_API_KEY y CHANNEL_ID estén configurados, o añade IDs manuales en el archivo.', 'error');
+        }
+    }
+
+    async function ensureVideoIdsAvailable() {
+        if (channelVideoIds.length > 0) return true;
+
+        await fetchVideosFromServer();
+
+        return channelVideoIds.length > 0;
+    }
+
     // Función auxiliar: obtener un id aleatorio
     function getRandomVideoId() {
         if (!channelVideoIds || channelVideoIds.length === 0) return null;
@@ -406,13 +476,13 @@
         createPlayer();
     }
 
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
     async function playRandomVideo() {
-        // Si no hay IDs locales intentamos cargar desde la API (si tienes channelId y key)
-        if (!getRandomVideoId()) {
-            // Si defines CHANNEL_ID en la llamada, o mejor: llamar a un endpoint servidor para obtener IDs
-            // Aquí NO intento adivinar el channelId: el approach recomendado es proveer video IDs o usar servidor
-            console.warn('No hay videos listados en VIDEO_IDS y no se intentará fetch sin key/ID configurados.');
-            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o configura un servidor para obtenerlos.');
+        if (!(await ensureVideoIdsAvailable())) {
+            console.warn('No hay videos disponibles todavía. Añade IDs manuales o verifica la API.');
+            setCtaStatus('Sigue sin haber historias disponibles. Revisa tu configuración o intenta de nuevo en unos segundos.', 'error');
+            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o verifica tu endpoint /api/videos.');
             return;
         }
 
@@ -421,6 +491,12 @@
             // Si la API llama a onYouTubeIframeAPIReady creará el player; sino, lo hacemos nosotros si ya está disponible
             if (typeof YT !== 'undefined' && !player) createPlayer();
             const vid = getRandomVideoId();
+            if (!vid) {
+                console.warn('No se pudo seleccionar un video aleatorio.');
+                setCtaStatus('No se pudo seleccionar ninguna historia. Intenta de nuevo.', 'error');
+                alert('No se pudo seleccionar un video. Intenta de nuevo en unos segundos.');
+                return;
+            }
             if (player && player.loadVideoById) {
                 player.loadVideoById(vid);
             } else {
@@ -441,8 +517,10 @@
             const videoSection = document.getElementById('videoSection');
             videoSection.classList.add('active');
             videoSection.setAttribute('aria-hidden', 'false');
+            setCtaStatus('Historia maldita invocada. ¡Disfruta del terror!');
         } catch (err) {
             console.error('Error al reproducir vídeo:', err);
+            setCtaStatus('No se pudo reproducir el vídeo. Revisa la consola o tu configuración y vuelve a intentar.', 'error');
             alert('No se pudo reproducir el vídeo. Revisa la consola para más detalles.');
         }
     }
@@ -471,6 +549,7 @@
         ctaButton.disabled = true;
         const originalText = ctaButton.textContent;
         ctaButton.textContent = '⏳ Cargando historia maldita...';
+        setCtaStatus('Buscando historias malditas...');
 
         // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
         // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
@@ -488,6 +567,7 @@
     });
 
     anotherVideoBtn.addEventListener('click', () => {
+        setCtaStatus('Invocando otra historia maldita...');
         playRandomVideo();
     });
 
@@ -508,10 +588,14 @@
         // reset animación del libro
         bookCover.classList.remove('opening');
         bookCover.focus();
+        setCtaStatus('Cuando quieras, vuelve a invocar una historia maldita.');
     });
 
     // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
     // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
+
+    // Intenta precargar la lista de videos desde el servidor (si la función serverless está configurada)
+    fetchVideosFromServer().catch(() => {});
 
     // Si quieres pre-cargar la API sin reproducir, puedes llamar ensureYouTubeIframeApi() al inicio:
     // ensureYouTubeIframeApi().catch(()=>{});
