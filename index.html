@@ -322,18 +322,10 @@
     // y pásalo desde tu servidor o desde un archivo privado.
     const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
 
-    const countdownElements = {
-        days: document.getElementById('countdownDays'),
-        hours: document.getElementById('countdownHours'),
-        minutes: document.getElementById('countdownMinutes'),
-        seconds: document.getElementById('countdownSeconds'),
-    };
-
-    function setCountdownValue(key, value) {
-        if (countdownElements[key]) {
-            countdownElements[key].textContent = value;
-        }
-    }
+    const countdownDaysEl = document.getElementById('countdownDays');
+    const countdownHoursEl = document.getElementById('countdownHours');
+    const countdownMinutesEl = document.getElementById('countdownMinutes');
+    const countdownSecondsEl = document.getElementById('countdownSeconds');
 
     // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
     // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
@@ -356,10 +348,10 @@
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-        setCountdownValue('days', String(days).padStart(2,'0'));
-        setCountdownValue('hours', String(hours).padStart(2,'0'));
-        setCountdownValue('minutes', String(minutes).padStart(2,'0'));
-        setCountdownValue('seconds', String(seconds).padStart(2,'0'));
+        if (countdownDaysEl) countdownDaysEl.textContent = String(days).padStart(2,'0');
+        if (countdownHoursEl) countdownHoursEl.textContent = String(hours).padStart(2,'0');
+        if (countdownMinutesEl) countdownMinutesEl.textContent = String(minutes).padStart(2,'0');
+        if (countdownSecondsEl) countdownSecondsEl.textContent = String(seconds).padStart(2,'0');
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
     updateCountdown();
@@ -417,18 +409,47 @@
         }
     }
 
+    function normaliseVideoIds(payload) {
+        if (!payload) return [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload.videoIds)) return payload.videoIds;
+        if (typeof payload.videoIds === 'string') return [payload.videoIds];
+        if (Array.isArray(payload.videos)) return payload.videos;
+        if (typeof payload.videos === 'string') return [payload.videos];
+        if (Array.isArray(payload.items)) {
+            return payload.items
+                .map(item => {
+                    if (typeof item === 'string') return item;
+                    if (item && typeof item.id === 'string') return item.id;
+                    if (item && item.id && typeof item.id.videoId === 'string') return item.id.videoId;
+                    return null;
+                })
+                .filter(Boolean);
+        }
+        return [];
+    }
+
+    function mergeVideoIds(ids) {
+        const validIds = ids.filter(id => typeof id === 'string' && id.trim());
+        if (!validIds.length) return;
+        const merged = new Set(channelVideoIds);
+        validIds.forEach(id => merged.add(id));
+        channelVideoIds = Array.from(merged);
+    }
+
     async function fetchVideosFromServer() {
         try {
             const resp = await fetch('/api/videos');
-            const payload = resp.headers.get('content-type')?.includes('application/json') ? await resp.json() : null;
+            const isJson = resp.headers.get('content-type') && resp.headers.get('content-type').includes('application/json');
+            const payload = isJson ? await resp.json() : null;
             if (!resp.ok) {
                 const serverMessage = payload?.error || payload?.message;
                 throw new Error(serverMessage || `HTTP ${resp.status}`);
             }
-            const data = payload ?? {};
-            const newIds = (data?.videoIds || []).filter(id => typeof id === 'string' && id.trim());
+            const newIds = normaliseVideoIds(payload ?? {});
+            mergeVideoIds(newIds);
+
             if (newIds.length) {
-                channelVideoIds = Array.from(new Set([...channelVideoIds, ...newIds]));
                 console.log(`Cargados ${newIds.length} vídeos desde el servidor`);
             }
 
