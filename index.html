@@ -217,7 +217,7 @@
             * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
         }
     </style>
-</head>fetch('/api/videos') .then(async r => { console.log('status', r.status, 'ct', r.headers.get('content-type')); console.log(await r.text()); }) .catch(e => console.error('fetch error', e));
+</head>
 <body>
     <div class="container">
         <header class="header" role="banner">
@@ -229,23 +229,22 @@
             <!-- Countdown -->
             <section class="countdown-section" aria-labelledby="countdownTitle">
                 <h2 id="countdownTitle" class="countdown-title">🎃 Cuenta Regresiva a Halloween 🎃</h2>
-
-               <div class="time-unit">
-    <div class="time-value" id="countdownDays">00</div>
-    <span class="time-label">Días</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownHours">00</div>
-    <span class="time-label">Horas</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownMinutes">00</div>
-    <span class="time-label">Minutos</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownSeconds">00</div>
-    <span class="time-label">Segundos</span>
-</div>
+                <div class="countdown-timer">
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownDays">00</div>
+                        <span class="time-label">Días</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownHours">00</div>
+                        <span class="time-label">Horas</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownMinutes">00</div>
+                        <span class="time-label">Minutos</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownSeconds">00</div>
+                        <span class="time-label">Segundos</span>
                     </div>
                 </div>
             </section>
@@ -331,10 +330,10 @@
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-        document.getElementById('days').textContent = String(days).padStart(2,'0');
-        document.getElementById('hours').textContent = String(hours).padStart(2,'0');
-        document.getElementById('minutes').textContent = String(minutes).padStart(2,'0');
-        document.getElementById('seconds').textContent = String(seconds).padStart(2,'0');
+        document.getElementById('countdownDays').textContent = String(days).padStart(2,'0');
+        document.getElementById('countdownHours').textContent = String(hours).padStart(2,'0');
+        document.getElementById('countdownMinutes').textContent = String(minutes).padStart(2,'0');
+        document.getElementById('countdownSeconds').textContent = String(seconds).padStart(2,'0');
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
     updateCountdown();
