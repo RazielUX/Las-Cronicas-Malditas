@@ -1,9 +1,5 @@
-// URL (ejemplo cuando esté en Vercel): /api/videos
-// Vercel serverless function: coloca este archivo en /api/videos.js
-// Netlify: crea netlify/functions/videos.js con similar lógica.
-
-export default async function handler(req, res) {
-  // Lee la clave y el channel id desde variables de entorno (NO publicarlas)
+// CommonJS version — evita warning ESM en Vercel
+module.exports = async function handler(req, res) {
   const YT_KEY = process.env.YT_API_KEY;
   const CHANNEL_ID = process.env.CHANNEL_ID;
   const maxResults = req.query.maxResults || 50;
@@ -14,10 +10,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://www.googleapis.com/youtube/v3/search?` +
-                `key=${encodeURIComponent(YT_KEY)}` +
-                `&channelId=${encodeURIComponent(CHANNEL_ID)}` +
-                `&part=id&order=date&maxResults=${encodeURIComponent(maxResults)}&type=video`;
+    const url =
+      `https://www.googleapis.com/youtube/v3/search?` +
+      `key=${encodeURIComponent(YT_KEY)}` +
+      `&channelId=${encodeURIComponent(CHANNEL_ID)}` +
+      `&part=id&order=date&maxResults=${encodeURIComponent(maxResults)}&type=video`;
 
     const r = await fetch(url);
     if (!r.ok) {
@@ -27,6 +24,16 @@ export default async function handler(req, res) {
     }
 
     const data = await r.json();
+    const ids = (data.items || []).map(i => i && i.id && i.id.videoId).filter(Boolean);
+
+    // cache corto para no gastar cuota: 5 min
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.status(200).json({ videoIds: ids });
+  } catch (err) {
+    console.error('API error', err);
+    res.status(500).json({ error: err.message });
+  }
+};
     const ids = (data.items || []).map(i => i?.id?.videoId).filter(Boolean);
 
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600'); // cache 5 min
