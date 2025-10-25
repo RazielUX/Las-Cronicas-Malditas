@@ -311,9 +311,26 @@
     // - Opción A (recomendado): no usar key en el cliente. Genera una API en tu servidor que devuelva una lista de IDs.
     // - Opción B: si usas la API en cliente, define el valor en un archivo `config.js` no commiteado o en una variable de entorno del build.
     //
-    // Si quieres probar rápido sin API, puedes crear una lista de VIDEO_IDS abajo.
+    // Si quieres probar rápido sin API, puedes crear una lista de STATIC_VIDEO_IDS abajo.
     // -------------------------------------------------------
-    const VIDEO_IDS = [
+    // Puedes definir window.__LASCronicasConfig en otro <script> antes de este bloque
+    // para inyectar videoIds iniciales o forzar channelId/maxResults sin tocar este archivo.
+    // Ejemplo:
+    // <script>
+    //   window.__LASCronicasConfig = {
+    //     videoIds: ['abc123', 'def456'],
+    //     channelId: 'UC123...',
+    //     fetchOnLoad: true,
+    //     disableApi: false
+    //   };
+    // </script>
+    const CLIENT_CONFIG =
+        window.__LASCronicasConfig ||
+        window.__LAS_CRONICAS_CONFIG__ ||
+        window.__LASC_CONFIG__ ||
+        {};
+
+    const STATIC_VIDEO_IDS = [
         // Si quieres probar sin usar la API, pega aquí algunos IDs de vídeo (ej. 'dQw4w9WgXcQ')
         // 'abcdefghijk',
     ];
@@ -321,6 +338,15 @@
     // Si vas a usar la YouTube Data API desde cliente, deja YOUTUBE_API_KEY vacío
     // y pásalo desde tu servidor o desde un archivo privado.
     const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
+
+    const PRECONFIGURED_IDS = Array.isArray(CLIENT_CONFIG.videoIds)
+        ? CLIENT_CONFIG.videoIds
+        : [];
+    const channelIdHint = typeof CLIENT_CONFIG.channelId === 'string'
+        ? CLIENT_CONFIG.channelId.trim()
+        : '';
+    const autoFetchEnabled = CLIENT_CONFIG.fetchOnLoad !== false;
+    const disableApiFetch = CLIENT_CONFIG.disableApi === true;
 
     const countdownDaysEl = document.getElementById('countdownDays');
     const countdownHoursEl = document.getElementById('countdownHours');
@@ -361,7 +387,12 @@
     // YOUTUBE PLAYER + carga de IDs
     // -------------------------------------------------------
     let player = null;
-    let channelVideoIds = VIDEO_IDS.filter(id => typeof id === 'string' && id.trim()); // combinar posibles orígenes
+    let channelVideoIds = Array.from(
+        new Set(
+            [...STATIC_VIDEO_IDS, ...PRECONFIGURED_IDS]
+                .filter(id => typeof id === 'string' && id.trim())
+        )
+    );
     const ctaStatus = document.getElementById('ctaStatus');
 
     function setCtaStatus(message, tone = 'info') {
@@ -371,7 +402,17 @@
     }
 
     if (channelVideoIds.length) {
-        setCtaStatus('Historias malditas listas. Cuando quieras, pulsa el botón.');
+        setCtaStatus(
+            CLIENT_CONFIG.readyMessage ||
+                'Historias malditas listas. Cuando quieras, pulsa el botón.'
+        );
+    } else if (CLIENT_CONFIG.initialStatusMessage) {
+        setCtaStatus(CLIENT_CONFIG.initialStatusMessage);
+    } else if (autoFetchEnabled && !disableApiFetch) {
+        setCtaStatus(
+            CLIENT_CONFIG.loadingMessage ||
+                'Invocando historias desde tu servidor...'
+        );
     }
 
     // Cargar script de la IFrame API solo si el usuario solicita reproducir
@@ -438,8 +479,13 @@
     }
 
     async function fetchVideosFromServer() {
+        if (disableApiFetch) return;
         try {
-            const resp = await fetch('/api/videos');
+            const query = new URLSearchParams();
+            if (channelIdHint) query.set('channelId', channelIdHint);
+            if (CLIENT_CONFIG.maxResults) query.set('maxResults', CLIENT_CONFIG.maxResults);
+
+            const resp = await fetch(`/api/videos${query.toString() ? `?${query.toString()}` : ''}`);
             const isJson = resp.headers.get('content-type') && resp.headers.get('content-type').includes('application/json');
             const payload = isJson ? await resp.json() : null;
             if (!resp.ok) {
@@ -454,13 +500,24 @@
             }
 
             if (channelVideoIds.length) {
-                setCtaStatus('Historias malditas listas. Cuando quieras, pulsa el botón.');
+                setCtaStatus(
+                    CLIENT_CONFIG.readyMessage ||
+                        'Historias malditas listas. Cuando quieras, pulsa el botón.'
+                );
             } else {
-                setCtaStatus('No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.', 'error');
+                setCtaStatus(
+                    CLIENT_CONFIG.missingVideoMessage ||
+                        'No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.',
+                    'error'
+                );
             }
         } catch (err) {
             console.warn('No se pudieron obtener vídeos desde /api/videos:', err);
-            setCtaStatus('No se pudieron cargar las historias. Verifica en Vercel que YT_API_KEY y CHANNEL_ID estén configurados, o añade IDs manuales en el archivo.', 'error');
+            setCtaStatus(
+                CLIENT_CONFIG.fetchErrorMessage ||
+                    'No se pudieron cargar las historias. Verifica en Vercel que YT_API_KEY y CHANNEL_ID estén configurados, o añade IDs manuales en el archivo.',
+                'error'
+            );
         }
     }
 
@@ -503,7 +560,7 @@
         if (!(await ensureVideoIdsAvailable())) {
             console.warn('No hay videos disponibles todavía. Añade IDs manuales o verifica la API.');
             setCtaStatus('Sigue sin haber historias disponibles. Revisa tu configuración o intenta de nuevo en unos segundos.', 'error');
-            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o verifica tu endpoint /api/videos.');
+            alert('No se encontraron videos. Añade algunos IDs a STATIC_VIDEO_IDS o verifica tu endpoint /api/videos.');
             return;
         }
 
@@ -598,7 +655,7 @@
             // y descomenta la siguiente línea (y añade CHANNEL_ID):
             // await loadChannelVideosFromApi(CHANNEL_ID);
 
-            // Reproducir (usa la lista VIDEO_IDS si la llenaste)
+            // Reproducir (usa la lista STATIC_VIDEO_IDS si la llenaste)
             await playRandomVideo();
 
             ctaButton.disabled = false;
@@ -649,7 +706,15 @@
     // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
 
     // Intenta precargar la lista de videos desde el servidor (si la función serverless está configurada)
-    fetchVideosFromServer().catch(() => {});
+    if (autoFetchEnabled && !disableApiFetch) {
+        fetchVideosFromServer().catch(() => {});
+    } else if (!channelVideoIds.length) {
+        setCtaStatus(
+            CLIENT_CONFIG.manualSetupMessage ||
+                'Añade al menos un ID de vídeo en STATIC_VIDEO_IDS o expón window.__LASCronicasConfig.videoIds para poder invocar una historia.',
+            'error'
+        );
+    }
 
     // Si quieres pre-cargar la API sin reproducir, puedes llamar ensureYouTubeIframeApi() al inicio:
     // ensureYouTubeIframeApi().catch(()=>{});

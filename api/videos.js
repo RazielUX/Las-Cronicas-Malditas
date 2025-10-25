@@ -10,6 +10,8 @@ export default async function handler(req, res) {
       req.query?.channelId ??
       process.env.CHANNEL_ID ??
       process.env.YOUTUBE_CHANNEL_ID ??
+      process.env.NEXT_PUBLIC_CHANNEL_ID ??
+      process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID ??
       '';
 
     const maxResults = req.query?.maxResults ?? 50;
@@ -22,8 +24,13 @@ export default async function handler(req, res) {
           details: {
             YT_KEY_present: Boolean(YT_KEY),
             CHANNEL_ID_present: Boolean(requestedChannel),
-            expectedEnv: ['YT_API_KEY', 'YOUTUBE_API_KEY'],
-            expectedChannelEnv: ['CHANNEL_ID', 'YOUTUBE_CHANNEL_ID'],
+            expectedEnv: ['YT_API_KEY', 'YOUTUBE_API_KEY', 'NEXT_PUBLIC_YT_API_KEY'],
+            expectedChannelEnv: [
+              'CHANNEL_ID',
+              'YOUTUBE_CHANNEL_ID',
+              'NEXT_PUBLIC_CHANNEL_ID',
+              'NEXT_PUBLIC_YOUTUBE_CHANNEL_ID',
+            ],
           },
         });
       return;
