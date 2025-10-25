@@ -1,0 +1,468 @@
+                0 20px 60px rgba(255, 0, 64, 0.5),
+                inset 0 0 40px rgba(139, 0, 0, 0.5);
+        }
+        
+        .book-cover.opening {
+            animation: bookOpen 1.5s ease-out forwards;
+        }
+        
+        @keyframes bookOpen {
+            0% { transform: translate(-50%, -50%) rotateY(0deg); }
+            50% { transform: translate(-50%, -50%) rotateY(-90deg); }
+            100% { transform: translate(-50%, -50%) rotateY(-180deg); opacity: 0; }
+        }
+        
+        .book-title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Creepster', cursive;
+            font-size: 1.8rem;
+            color: #ff0040;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 0, 64, 0.8);
+            padding: 1rem;
+        }
+        
+        .skulls {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+        
+        .skull-1 { top: 10%; left: 10%; animation: skullFloat 3s ease-in-out infinite; }
+        .skull-2 { top: 10%; right: 10%; animation: skullFloat 3s ease-in-out infinite 0.5s; }
+        .skull-3 { bottom: 10%; left: 10%; animation: skullFloat 3s ease-in-out infinite 1s; }
+        .skull-4 { bottom: 10%; right: 10%; animation: skullFloat 3s ease-in-out infinite 1.5s; }
+        
+        @keyframes skullFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            margin: 3rem 0;
+            animation: fadeInUp 1s ease-out 0.9s both;
+        }
+        
+        .cta-text {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            color: #e8d5c4;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);
+            font-style: italic;
+        }
+        
+        .cta-button {
+            font-family: 'Creepster', cursive;
+            font-size: clamp(1.3rem, 4vw, 2rem);
+            background: linear-gradient(145deg, #8b0000, #ff0040);
+            color: #fff;
+            border: 3px solid #ff0040;
+            border-radius: 50px;
+            padding: 1.5rem 3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 10px 30px rgba(255, 0, 64, 0.4),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .cta-button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 
+                0 15px 40px rgba(255, 0, 64, 0.6),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .cta-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Video Player Section */
+        .video-section {
+            display: none;
+            animation: fadeInUp 0.8s ease-out;
+            margin-top: 3rem;
+        }
+        
+        .video-section.active {
+            display: block;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            aspect-ratio: 9/16;
+            background: #000;
+            border: 4px solid #ff0040;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 40px rgba(255, 0, 64, 0.5),
+                0 20px 60px rgba(0, 0, 0, 0.9);
+        }
+        
+        .video-player {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .video-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .secondary-button {
+            font-family: 'IM Fell English', serif;
+            font-size: 1.2rem;
+            background: rgba(74, 123, 167, 0.3);
+            color: #4a7ba7;
+            border: 2px solid #4a7ba7;
+            border-radius: 30px;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .secondary-button:hover {
+            background: rgba(74, 123, 167, 0.6);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(74, 123, 167, 0.3);
+        }
+        
+        /* Loading State */
+        .loading {
+            text-align: center;
+            color: #ff0040;
+            font-size: 1.5rem;
+            padding: 2rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .countdown-timer {
+                gap: 1rem;
+            }
+            
+            .time-unit {
+                min-width: 90px;
+                padding: 1rem 0.5rem;
+            }
+            
+            .book-animation {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .book-cover {
+                width: 160px;
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">Las Crónicas Malditas</h1>
+            <p class="tagline">Donde las historias oscuras cobran vida...</p>
+        </header>
+        
+        <!-- Countdown Section -->
+        <section class="countdown-section">
+            <h2 class="countdown-title">🎃 Cuenta Regresiva a Halloween 🎃</h2>
+            <div class="countdown-timer">
+                <div class="time-unit">
+                    <span class="time-value" id="days">00</span>
+                    <span class="time-label">Días</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="hours">00</span>
+                    <span class="time-label">Horas</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="minutes">00</span>
+                    <span class="time-label">Minutos</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="seconds">00</span>
+                    <span class="time-label">Segundos</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Book Animation -->
+        <div class="book-animation">
+            <div class="book">
+                <div class="book-cover" id="bookCover">
+                    <div class="book-title">
+                        Las Crónicas<br>Malditas
+                    </div>
+                </div>
+                <div class="skulls skull-1">💀</div>
+                <div class="skulls skull-2">💀</div>
+                <div class="skulls skull-3">💀</div>
+                <div class="skulls skull-4">💀</div>
+            </div>
+        </div>
+        
+        <!-- CTA Section -->
+        <section class="cta-section" id="ctaSection">
+            <p class="cta-text">
+                ¿Te atreves a descubrir los secretos más oscuros?<br>
+                <em>Una historia te espera...</em>
+            </p>
+            <button class="cta-button" id="ctaButton">
+                ⚰️ Revelar Historia Maldita ⚰️
+            </button>
+        </section>
+        
+        <!-- Video Section -->
+        <section class="video-section" id="videoSection">
+            <div class="video-container">
+                <div id="player"></div>
+            </div>
+            <div class="video-controls">
+                <button class="secondary-button" id="anotherVideoBtn">
+                    🔮 Otra Historia
+                </button>
+                <button class="secondary-button" id="backToStartBtn">
+                    📖 Volver al Inicio
+                </button>
+            </div>
+        </section>
+    </div>
+    
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURACIÓN - CAMBIA ESTOS VALORES
+        // ============================================
+        
+        // 🔑 TU API KEY DE YOUTUBE (obtener en: https://console.cloud.google.com/)
+        const YOUTUBE_API_KEY = AIzaSyCp4H-4Zi_oIk81IHRhC16A7ZEY4JZrhNw
+        
+        // 📺 TU CANAL ID (obtener de: https://www.youtube.com/@tu-canal > click derecho > Ver código fuente > buscar "channelId")
+        const CHANNEL_ID = UCxy2OusWK82FdMOHwU-6NRg
+        // ============================================
+        // CONTADOR HALLOWEEN
+        // ============================================
+        
+        function updateCountdown() {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const halloween = new Date(currentYear, 9, 31, 23, 59, 59); // Octubre 31
+            
+            // Si ya pasó Halloween este año, contar para el próximo
+            if (now > halloween) {
+                halloween.setFullYear(currentYear + 1);
+            }
+            
+            const diff = halloween - now;
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            document.getElementById('days').textContent = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+        
+        // Actualizar cada segundo
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+        
+        // ============================================
+        // YOUTUBE VIDEO PLAYER
+        // ============================================
+        
+        let player;
+        let videoIds = [];
+        
+        // Cargar videos del canal
+        async function loadChannelVideos() {
+            try {
+                const response = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=50&type=video`
+                );
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar videos');
+                }
+                
+                const data = await response.json();
+                videoIds = data.items
+                    .filter(item => item.id.videoId)
+                    .map(item => item.id.videoId);
+                
+                console.log(`✅ ${videoIds.length} videos cargados`);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar los videos. Verifica tu API Key y Channel ID.');
+            }
+        }
+        
+        // Obtener video aleatorio
+        function getRandomVideoId() {
+            if (videoIds.length === 0) return null;
+            const randomIndex = Math.floor(Math.random() * videoIds.length);
+            return videoIds[randomIndex];
+        }
+        
+        // Inicializar YouTube Player (se ejecuta cuando la API está lista)
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '100%',
+                width: '100%',
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 1,
+                    'rel': 0,
+                    'modestbranding': 1
+                }
+            });
+        }
+        
+        // Reproducir video aleatorio
+        function playRandomVideo() {
+            const videoId = getRandomVideoId();
+            if (!videoId) {
+                alert('No se pudieron cargar los videos. Intenta de nuevo.');
+                return;
+            }
+            
+            if (player && player.loadVideoById) {
+                player.loadVideoById(videoId);
+            }
+            
+            // Mostrar sección de video
+            document.getElementById('ctaSection').style.display = 'none';
+            document.getElementById('videoSection').classList.add('active');
+        }
+        
+        // ============================================
+        // INTERACCIONES
+        // ============================================
+        
+        const bookCover = document.getElementById('bookCover');
+        const ctaButton = document.getElementById('ctaButton');
+        const anotherVideoBtn = document.getElementById('anotherVideoBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
+        
+        // Click en el libro
+        bookCover.addEventListener('click', () => {
+            bookCover.classList.add('opening');
+            setTimeout(() => {
+                ctaButton.click();
+            }, 1200);
+        });
+        
+        // Click en CTA principal
+        ctaButton.addEventListener('click', async () => {
+            ctaButton.textContent = '⏳ Cargando historia maldita...';
+            ctaButton.disabled = true;
+            
+            if (videoIds.length === 0) {
+                await loadChannelVideos();
+            }
+            
+            playRandomVideo();
+            
+            ctaButton.textContent = '⚰️ Revelar Historia Maldita ⚰️';
+            ctaButton.disabled = false;
+        });
+        
+        // Otro video
+        anotherVideoBtn.addEventListener('click', () => {
+            playRandomVideo();
+        });
+        
+        // Volver al inicio
+        backToStartBtn.addEventListener('click', () => {
+            document.getElementById('videoSection').classList.remove('active');
+            document.getElementById('ctaSection').style.display = 'block';
+            
+            if (player && player.stopVideo) {
+                player.stopVideo();
+            }
+            
+            // Reset animación del libro
+            bookCover.classList.remove('opening');
+        });
+        
+        // Cargar videos al iniciar
+        loadChannelVideos();
+    </script>
+</body>
+</html>
