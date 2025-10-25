@@ -164,7 +164,7 @@
         @keyframes skullFloat{ 0%,100%{ transform:translateY(0) rotate(0deg);} 50%{ transform:translateY(-12px) rotate(4deg);} }
 
         /* CTA */
-        .cta-section{ margin:2.4rem 0; animation:fadeInUp .9s ease-out both; }
+        .cta-section{ margin:2.4rem 0; animation:fadeInUp .9s ease-out both; text-align:center; }
         .cta-text{ text-align:center; font-size:clamp(1.05rem,3.2vw,1.6rem); color:#e8d5c4; margin-bottom:1.2rem; font-style:italic; text-shadow:2px 2px 6px rgba(0,0,0,0.9); }
         .cta-button{
             font-family:'Creepster',cursive;
@@ -290,166 +290,121 @@
         </footer>
     </div>
 
-    <!-- YouTube IFrame API (se carga solo al necesitar reproducir, para acelerar carga inicial) -->
     <script>
-    // -------------------------------------------------------
-    // CONFIG (NO COMMIT: no dejes tus claves en el repo público)
-    // -------------------------------------------------------
-    // Opciones seguras:
-    // - Opción A (recomendado): no usar key en el cliente. Genera una API en tu servidor que devuelva una lista de IDs.
-    // - Opción B: si usas la API en cliente, define el valor en un archivo `config.js` no commiteado o en una variable de entorno del build.
-    //
-    // Si quieres probar rápido sin API, puedes crear una lista de VIDEO_IDS abajo.
-    // -------------------------------------------------------
-    const VIDEO_IDS = [
-        // Si quieres probar sin usar la API, pega aquí algunos IDs de vídeo (ej. 'dQw4w9WgXcQ')
-        // 'abcdefghijk',
-    ];
-
-    // Si vas a usar la YouTube Data API desde cliente, deja YOUTUBE_API_KEY vacío
-    // y pásalo desde tu servidor o desde un archivo privado.
-    const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
-
-    // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
-    // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
-    // then: const YOUTUBE_API_KEY = window.__YOUTUBE_API_KEY__ || '';
-    // -------------------------------------------------------
-
-    // -------------------------------------------------------
-    // UTIL: Conteo regresivo
-    // -------------------------------------------------------
-    function updateCountdown() {
-        try {
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            // Octubre = 9 (0-based month index). Ajustado a las 00:00:00 del día 31 para empezar justo el día.
-            let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
-            if (now > halloween) halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
-
-            const diff = Math.max(0, halloween - now);
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            const daysEl = document.getElementById('countdownDays');
-            const hoursEl = document.getElementById('countdownHours');
-            const minutesEl = document.getElementById('countdownMinutes');
-            const secondsEl = document.getElementById('countdownSeconds');
-
-            if (daysEl) daysEl.textContent = String(days).padStart(2,'0');
-            if (hoursEl) hoursEl.textContent = String(hours).padStart(2,'0');
-            if (minutesEl) minutesEl.textContent = String(minutes).padStart(2,'0');
-            if (secondsEl) secondsEl.textContent = String(seconds).padStart(2,'0');
-        } catch (err) {
-            console.error('Error actualizando contador:', err);
-        }
-    }
-    // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            updateCountdown();
-            setInterval(updateCountdown, 1000);
-        });
-    } else {
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
-    }
-
-    // -------------------------------------------------------
-    // YOUTUBE PLAYER + carga de IDs
-    // -------------------------------------------------------
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
     let player = null;
-    let channelVideoIds = [...VIDEO_IDS]; // combinar posibles orígenes
-
-    // Cargar script de la IFrame API solo si el usuario solicita reproducir
+    let channelVideoIds = [];
     let ytApiLoaded = false;
+
+    // ============================================
+    // CONTADOR REGRESIVO
+    // ============================================
+    function updateCountdown() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
+
+        if (now > halloween) {
+            halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
+        }
+
+        const diff = Math.max(0, halloween - now);
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const daysEl = document.getElementById('countdownDays');
+        const hoursEl = document.getElementById('countdownHours');
+        const minutesEl = document.getElementById('countdownMinutes');
+        const secondsEl = document.getElementById('countdownSeconds');
+
+        if (daysEl) daysEl.textContent = String(days).padStart(2, '0');
+        if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+        if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, '0');
+        if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, '0');
+    }
+
+    // ============================================
+    // YOUTUBE PLAYER
+    // ============================================
     function ensureYouTubeIframeApi() {
         if (ytApiLoaded) return Promise.resolve();
+
         return new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = "https://www.youtube.com/iframe_api";
-            s.async = true;
-            s.onload = () => { /* la API llama a onYouTubeIframeAPIReady() cuando está lista */ resolve(); };
-            s.onerror = () => reject(new Error('No se pudo cargar la API de YouTube'));
-            document.body.appendChild(s);
+            const script = document.createElement('script');
+            script.src = "https://www.youtube.com/iframe_api";
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('No se pudo cargar la API de YouTube'));
+            document.body.appendChild(script);
             ytApiLoaded = true;
         });
     }
 
-    // Si deseas usar la YouTube Data API desde cliente: se requiere YOUTUBE_API_KEY
-    async function loadChannelVideosFromApi(channelId, maxResults = 50) {
-        if (!YOUTUBE_API_KEY) {
-            console.warn('No se proporcionó API key para YouTube Data API. Omitiendo fetch.');
-            return;
-        }
-        try {
-            const resp = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${encodeURIComponent(YOUTUBE_API_KEY)}&channelId=${encodeURIComponent(channelId)}&part=snippet,id&order=date&maxResults=${maxResults}&type=video`);
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
-            const ids = data.items?.map(i => i.id?.videoId).filter(Boolean);
-            if (ids?.length) {
-                channelVideoIds = Array.from(new Set([...channelVideoIds, ...ids]));
-                console.log(`Cargados ${ids.length} vídeos desde la API`);
-            }
-        } catch (err) {
-            console.warn('Error al cargar videos desde la API:', err);
-        }
+    function onYouTubeIframeAPIReady() {
+        console.log('YouTube IFrame API lista');
     }
 
-    // Función auxiliar: obtener un id aleatorio
-    function getRandomVideoId() {
-        if (!channelVideoIds || channelVideoIds.length === 0) return null;
-        return channelVideoIds[Math.floor(Math.random() * channelVideoIds.length)];
-    }
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
-    // Inicializar reproductor (cuando la API esté disponible)
     function createPlayer() {
         if (player) return;
+
         player = new YT.Player('player', {
             width: '100%',
             height: '100%',
             playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1 },
             events: {
-                onReady: (e) => { /* listo */ },
-                onError: (e) => console.warn('YouTube player error', e)
+                onReady: () => console.log('Player listo'),
+                onError: (e) => console.error('YouTube player error:', e)
             }
         });
     }
 
-    // Called by the IFrame API when loaded
-    function onYouTubeIframeAPIReady() { // eslint-disable-line no-unused-vars
-        createPlayer();
+    function getRandomVideoId() {
+        if (!channelVideoIds || channelVideoIds.length === 0) return null;
+        return channelVideoIds[Math.floor(Math.random() * channelVideoIds.length)];
     }
 
     async function playRandomVideo() {
-        // Si no hay IDs locales intentamos cargar desde la API (si tienes channelId y key)
-        if (!getRandomVideoId()) {
-            // Si defines CHANNEL_ID en la llamada, o mejor: llamar a un endpoint servidor para obtener IDs
-            // Aquí NO intento adivinar el channelId: el approach recomendado es proveer video IDs o usar servidor
-            console.warn('No hay videos listados en VIDEO_IDS y no se intentará fetch sin key/ID configurados.');
-            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o configura un servidor para obtenerlos.');
+        const vid = getRandomVideoId();
+
+        if (!vid) {
+            console.error('No hay videos disponibles');
+            alert('No se encontraron videos. Verifica la configuración de la API.');
             return;
         }
 
         try {
             await ensureYouTubeIframeApi();
-            // Si la API llama a onYouTubeIframeAPIReady creará el player; sino, lo hacemos nosotros si ya está disponible
-            if (typeof YT !== 'undefined' && !player) createPlayer();
-            const vid = getRandomVideoId();
-            if (player && player.loadVideoById) {
-                player.loadVideoById(vid);
+
+            // Esperar a que YT esté disponible
+            let attempts = 0;
+            while (typeof YT === 'undefined' && attempts < 20) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+
+            if (typeof YT !== 'undefined' && YT.Player) {
+                if (!player) createPlayer();
+
+                // Esperar a que el player esté listo
+                attempts = 0;
+                while (!player.loadVideoById && attempts < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (player.loadVideoById) {
+                    player.loadVideoById(vid);
+                } else {
+                    throw new Error('Player no está listo');
+                }
             } else {
-                // fallback: crear el iframe manualmente
-                const iframe = document.createElement('iframe');
-                iframe.width = '100%';
-                iframe.height = '100%';
-                iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1`;
-                iframe.frameBorder = '0';
-                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-                const playerDiv = document.getElementById('player');
-                playerDiv.innerHTML = '';
-                playerDiv.appendChild(iframe);
+                throw new Error('YT no está disponible');
             }
 
             // Mostrar sección de video
@@ -458,19 +413,44 @@
             videoSection.classList.add('active');
             videoSection.setAttribute('aria-hidden', 'false');
         } catch (err) {
-            console.error('Error al reproducir vídeo:', err);
-            alert('No se pudo reproducir el vídeo. Revisa la consola para más detalles.');
+            console.error('Error al reproducir video:', err);
+
+            // Fallback: usar iframe directo
+            const iframe = document.createElement('iframe');
+            iframe.width = '100%';
+            iframe.height = '100%';
+            iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1`;
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            iframe.allowFullscreen = true;
+
+            const playerDiv = document.getElementById('player');
+            playerDiv.innerHTML = '';
+            playerDiv.appendChild(iframe);
+
+            // Mostrar sección de video
+            document.getElementById('ctaSection').style.display = 'none';
+            const videoSection = document.getElementById('videoSection');
+            videoSection.classList.add('active');
+            videoSection.setAttribute('aria-hidden', 'false');
         }
     }
 
-    // -------------------------------------------------------
-    // Interacciones y accesibilidad
-    // -------------------------------------------------------
-    function initializeInteractions() {
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+    function init() {
+        console.log('Inicializando aplicación...');
+
+        // Año en footer
         const yearEl = document.getElementById('year');
         if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-        // elementos
+        // Iniciar contador
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        // Elementos
         const bookCover = document.getElementById('bookCover');
         const ctaButton = document.getElementById('ctaButton');
         const anotherVideoBtn = document.getElementById('anotherVideoBtn');
@@ -481,86 +461,94 @@
             return;
         }
 
-        // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
+        // Event: Abrir libro
         bookCover.addEventListener('click', () => {
-            // animación y luego revelar CTA
             bookCover.classList.add('opening');
             setTimeout(() => ctaButton.focus(), 900);
         });
 
-    // CTA principal
-    ctaButton.addEventListener('click', async () => {
-        ctaButton.setAttribute('aria-pressed', 'true');
-        ctaButton.disabled = true;
-        const originalText = ctaButton.textContent;
-        ctaButton.textContent = '⏳ Cargando historia maldita...';
+        // Event: CTA principal
+        ctaButton.addEventListener('click', async () => {
+            console.log('CTA clicked');
+            ctaButton.setAttribute('aria-pressed', 'true');
+            ctaButton.disabled = true;
+            const originalText = ctaButton.textContent;
+            ctaButton.textContent = '⏳ Cargando historia maldita...';
 
-        try {
-            // Cargar videos desde la API del servidor
-            if (channelVideoIds.length === 0) {
-                console.log('Cargando videos desde /api/videos...');
-                const response = await fetch('/api/videos');
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.videoIds && data.videoIds.length > 0) {
-                        channelVideoIds = data.videoIds;
-                        console.log(`Cargados ${channelVideoIds.length} videos desde la API`);
+            try {
+                // Cargar videos si no están cargados
+                if (channelVideoIds.length === 0) {
+                    console.log('Cargando videos desde /api/videos...');
+                    const response = await fetch('/api/videos');
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Respuesta de API:', data);
+
+                        if (data.videoIds && data.videoIds.length > 0) {
+                            channelVideoIds = data.videoIds;
+                            console.log(`✓ Cargados ${channelVideoIds.length} videos`);
+                        } else {
+                            console.warn('La API no devolvió videos');
+                        }
                     } else {
-                        console.warn('La API no devolvió videos');
+                        const errorText = await response.text();
+                        console.error('Error al cargar videos:', response.status, errorText);
                     }
-                } else {
-                    console.error('Error al cargar videos:', response.status, response.statusText);
                 }
+
+                // Reproducir video
+                await playRandomVideo();
+            } catch (err) {
+                console.error('Error en CTA:', err);
+                alert('Hubo un error al cargar los videos. Revisa la consola del navegador.');
+            } finally {
+                ctaButton.disabled = false;
+                ctaButton.textContent = originalText;
+                ctaButton.setAttribute('aria-pressed', 'false');
             }
+        });
 
-            // Reproducir (usa la lista VIDEO_IDS si la llenaste)
-            await playRandomVideo();
-        } catch (err) {
-            console.error('Error en CTA:', err);
-            alert('Hubo un error al cargar los videos. Por favor revisa la consola.');
-        } finally {
-            ctaButton.disabled = false;
-            ctaButton.textContent = originalText;
-            ctaButton.setAttribute('aria-pressed', 'false');
-        }
-    });
+        // Event: Otro video
+        anotherVideoBtn.addEventListener('click', () => {
+            console.log('Otro video clicked');
+            playRandomVideo();
+        });
 
-    anotherVideoBtn.addEventListener('click', () => {
-        playRandomVideo();
-    });
-
+        // Event: Volver al inicio
         backToStartBtn.addEventListener('click', () => {
+            console.log('Volver al inicio clicked');
             const videoSection = document.getElementById('videoSection');
             videoSection.classList.remove('active');
             videoSection.setAttribute('aria-hidden', 'true');
             document.getElementById('ctaSection').style.display = 'block';
 
-            // detener player si existe
+            // Detener player
             if (player && player.stopVideo) {
-                try { player.stopVideo(); } catch (e) { /* ignore */ }
+                try {
+                    player.stopVideo();
+                } catch (e) {
+                    console.warn('Error al detener player:', e);
+                }
             } else {
                 const playerDiv = document.getElementById('player');
-                playerDiv.innerHTML = '';
+                if (playerDiv) playerDiv.innerHTML = '';
             }
 
-            // reset animación del libro
+            // Reset animación del libro
             bookCover.classList.remove('opening');
             bookCover.focus();
         });
+
+        console.log('✓ Aplicación inicializada correctamente');
     }
 
-    // Inicializar cuando el DOM esté listo
+    // Ejecutar cuando el DOM esté listo
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeInteractions);
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        initializeInteractions();
+        init();
     }
-
-    // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
-    // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
-
-    // Si quieres pre-cargar la API sin reproducir, puedes llamar ensureYouTubeIframeApi() al inicio:
-    // ensureYouTubeIframeApi().catch(()=>{});
     </script>
 </body>
 </html>

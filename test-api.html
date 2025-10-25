@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Test de API y Contador</h1>
+
+    <h2>Contador de Halloween:</h2>
+    <div id="countdown">Cargando...</div>
+
+    <h2>Test de API:</h2>
+    <button id="testBtn">Probar /api/videos</button>
+    <div id="result"></div>
+
+    <script>
+        // Test contador
+        function updateCountdown() {
+            console.log('updateCountdown ejecutado');
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            let halloween = new Date(currentYear, 9, 31, 0, 0, 0);
+            if (now > halloween) halloween = new Date(currentYear + 1, 9, 31, 0, 0, 0);
+
+            const diff = Math.max(0, halloween - now);
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('countdown').textContent =
+                `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        // Test API
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Cargando...';
+
+            try {
+                const response = await fetch('/api/videos');
+                const text = await response.text();
+
+                resultDiv.innerHTML = `
+                    <p>Status: ${response.status}</p>
+                    <p>Content-Type: ${response.headers.get('content-type')}</p>
+                    <pre>${text}</pre>
+                `;
+            } catch (err) {
+                resultDiv.textContent = 'Error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
