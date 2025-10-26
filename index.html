@@ -8,6 +8,17 @@
 
     <title>Las Crónicas Malditas — Cuenta Regresiva a Halloween</title>
 
+    <!-- Google Analytics 4 -->
+    <!-- INSTRUCCIONES: Reemplaza G-XXXXXXXXXX con tu ID de medición de GA4 -->
+    <!-- Para obtenerlo: https://analytics.google.com -> Admin -> Data Streams -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX'); // Reemplaza con tu ID real
+    </script>
+
     <!-- Preconnect / Prefetch para rendimiento -->
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
@@ -586,6 +597,89 @@
     let ytApiLoaded = false;
 
     // ============================================
+    // ANALYTICS Y TRACKING
+    // ============================================
+    const Analytics = {
+        // Configuración
+        useGoogleAnalytics: true, // Cambiar a false si no usas GA4
+        useCustomAPI: true, // Cambiar a false si no quieres usar el endpoint propio
+
+        // Track de evento genérico
+        trackEvent(eventName, eventParams = {}) {
+            console.log('📊 Analytics:', eventName, eventParams);
+
+            // Google Analytics 4
+            if (this.useGoogleAnalytics && typeof gtag !== 'undefined') {
+                gtag('event', eventName, eventParams);
+            }
+
+            // API propia para almacenamiento interno
+            if (this.useCustomAPI) {
+                this.sendToCustomAPI(eventName, eventParams);
+            }
+        },
+
+        // Enviar a API propia
+        async sendToCustomAPI(eventName, eventParams) {
+            try {
+                await fetch('/api/analytics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: eventName,
+                        params: eventParams,
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        screenSize: `${window.innerWidth}x${window.innerHeight}`,
+                        referrer: document.referrer || 'direct'
+                    })
+                });
+            } catch (err) {
+                console.warn('Error enviando analytics a API propia:', err);
+            }
+        },
+
+        // Track de página vista
+        trackPageView() {
+            this.trackEvent('page_view', {
+                page_title: document.title,
+                page_location: window.location.href,
+                page_path: window.location.pathname
+            });
+        },
+
+        // Track de click en CTA
+        trackCTAClick() {
+            this.trackEvent('cta_click', {
+                button_name: 'Revelar Historia',
+                button_location: 'libro_principal'
+            });
+        },
+
+        // Track de video reproducido
+        trackVideoPlay(videoId) {
+            this.trackEvent('video_play', {
+                video_id: videoId,
+                video_source: 'youtube'
+            });
+        },
+
+        // Track de otro video
+        trackAnotherVideo() {
+            this.trackEvent('another_video_click', {
+                button_name: 'Otra Historia'
+            });
+        },
+
+        // Track de volver al inicio
+        trackBackToStart() {
+            this.trackEvent('back_to_start_click', {
+                button_name: 'Volver al Inicio'
+            });
+        }
+    };
+
+    // ============================================
     // LOTTIE BACKGROUND
     // ============================================
     function initLottieBackground() {
@@ -789,6 +883,9 @@
     function init() {
         console.log('Inicializando aplicación...');
 
+        // Track de página vista
+        Analytics.trackPageView();
+
         // Iniciar Lottie background
         initLottieBackground();
 
@@ -814,6 +911,10 @@
         ctaButton.addEventListener('click', async (e) => {
             e.stopPropagation();
             console.log('CTA clicked');
+
+            // Track del click en CTA
+            Analytics.trackCTAClick();
+
             ctaButton.setAttribute('aria-pressed', 'true');
             ctaButton.disabled = true;
             const originalText = ctaButton.textContent;
@@ -843,6 +944,12 @@
 
                 // Reproducir video
                 await playRandomVideo();
+
+                // Track de video reproducido
+                if (channelVideoIds.length > 0) {
+                    const currentVideoId = getRandomVideoId();
+                    Analytics.trackVideoPlay(currentVideoId);
+                }
             } catch (err) {
                 console.error('Error en CTA:', err);
                 alert('Hubo un error al cargar los videos. Revisa la consola del navegador.');
@@ -855,12 +962,14 @@
         // Event: Otro video
         anotherVideoBtn.addEventListener('click', () => {
             console.log('Otro video clicked');
+            Analytics.trackAnotherVideo();
             playRandomVideo();
         });
 
         // Event: Volver al inicio
         backToStartBtn.addEventListener('click', () => {
             console.log('Volver al inicio clicked');
+            Analytics.trackBackToStart();
             showBookSection();
         });
 
