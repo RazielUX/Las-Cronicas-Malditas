@@ -8,7 +8,7 @@ Resumen
 
 Archivos de ejemplo incluidos
 - /api/videos.js — función serverless para Vercel (igual idea para Netlify).
-- index.html — tu página (añade el snippet `fetchVideosFromServer()` antes de llamar a playRandomVideo()).
+- index.html — tu página (el CTA vuelve a pedir IDs si la precarga falla para que la interacción no quede rota).
 - .gitignore — evita subir archivos de configuración privados.
 
 Configuración — Vercel (recomendada)
@@ -16,6 +16,7 @@ Configuración — Vercel (recomendada)
 2. En Settings → Environment Variables añade:
    - YT_API_KEY = tu_api_key_de_google_cloud
    - CHANNEL_ID = UCxxxxxx (el id de tu canal)
+   - (opcionales) YOUTUBE_API_KEY, NEXT_PUBLIC_YT_API_KEY, YOUTUBE_CHANNEL_ID, NEXT_PUBLIC_CHANNEL_ID — acepta cualquiera de esos nombres.
 3. Despliega. La ruta serverless estará disponible en `/api/videos`.
 
 Configuración — Netlify
@@ -34,6 +35,12 @@ Buenas prácticas y seguridad
 Desarrollo local
 - Pasa la API key y CHANNEL_ID como variables de entorno locales (por ejemplo, en .env y usa un pequeño servidor/función local).
 - En Vercel, usa `vercel dev` y `vercel env pull` para sincronizar.
+
+Configuraciones rápidas desde el HTML
+- Si quieres evitar dependencias del endpoint mientras haces pruebas, abre `index.html` y añade IDs en el array `STATIC_VIDEO_IDS`.
+- Alternativamente, antes del `<script>` principal define `window.__LASCronicasConfig = { videoIds: ['abc123'], channelId: 'UC...' }` para cargar IDs personalizados o pasar `channelId`/`maxResults` sin editar el archivo principal.
+- Si estableces `window.__LASCronicasConfig.disableApi = true`, el botón CTA solo usará los IDs manuales (útil si no configurarás `/api/videos`).
+- Si el preload inicial falla, el CTA intentará invocar `/api/videos` otra vez cuando lo pulses, y mostrará mensajes de estado claros si sigue sin encontrar IDs.
 
 Si quieres, preparo:
 - 1) Un `config.example.js` para el caso en que **temporalmente** pruebes con una key en local (no commiteada).

@@ -180,6 +180,16 @@
         .cta-button:hover{ transform:translateY(-6px) scale(1.02); box-shadow:0 15px 40px rgba(255,0,64,0.5); }
         .cta-button:hover::before{ width:280px;height:280px; }
 
+        .cta-status{
+            margin-top:1rem;
+            text-align:center;
+            font-size:clamp(.95rem,2.6vw,1.1rem);
+            color:var(--muted);
+            min-height:1.2em;
+        }
+        .cta-status strong{ color:var(--accent-2); }
+        .cta-status.error{ color:var(--accent-1); }
+
         /* Video */
         .video-section{ display:none; animation:fadeInUp .8s ease-out; margin-top:1.6rem; }
         .video-section.active{ display:block; }
@@ -217,7 +227,7 @@
             * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
         }
     </style>
-</head>fetch('/api/videos') .then(async r => { console.log('status', r.status, 'ct', r.headers.get('content-type')); console.log(await r.text()); }) .catch(e => console.error('fetch error', e));
+</head>
 <body>
     <div class="container">
         <header class="header" role="banner">
@@ -230,22 +240,22 @@
             <section class="countdown-section" aria-labelledby="countdownTitle">
                 <h2 id="countdownTitle" class="countdown-title">🎃 Cuenta Regresiva a Halloween 🎃</h2>
 
-               <div class="time-unit">
-    <div class="time-value" id="countdownDays">00</div>
-    <span class="time-label">Días</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownHours">00</div>
-    <span class="time-label">Horas</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownMinutes">00</div>
-    <span class="time-label">Minutos</span>
-</div>
-<div class="time-unit">
-    <div class="time-value" id="countdownSeconds">00</div>
-    <span class="time-label">Segundos</span>
-</div>
+                <div class="countdown-timer" role="timer" aria-live="polite">
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownDays">00</div>
+                        <span class="time-label">Días</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownHours">00</div>
+                        <span class="time-label">Horas</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownMinutes">00</div>
+                        <span class="time-label">Minutos</span>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-value" id="countdownSeconds">00</div>
+                        <span class="time-label">Segundos</span>
                     </div>
                 </div>
             </section>
@@ -269,6 +279,8 @@
                 <p class="cta-text">¿Te atreves a descubrir los secretos más oscuros?<br><em>Una historia te espera...</em></p>
                 <button id="ctaButton" class="cta-button" aria-pressed="false">⚰️ Revelar Historia Maldita ⚰️</button>
             </section>
+
+            <p id="ctaStatus" class="cta-status" role="status" aria-live="polite"></p>
 
             <!-- Video section -->
             <section id="videoSection" class="video-section" aria-hidden="true">
@@ -299,9 +311,26 @@
     // - Opción A (recomendado): no usar key en el cliente. Genera una API en tu servidor que devuelva una lista de IDs.
     // - Opción B: si usas la API en cliente, define el valor en un archivo `config.js` no commiteado o en una variable de entorno del build.
     //
-    // Si quieres probar rápido sin API, puedes crear una lista de VIDEO_IDS abajo.
+    // Si quieres probar rápido sin API, puedes crear una lista de STATIC_VIDEO_IDS abajo.
     // -------------------------------------------------------
-    const VIDEO_IDS = [
+    // Puedes definir window.__LASCronicasConfig en otro <script> antes de este bloque
+    // para inyectar videoIds iniciales o forzar channelId/maxResults sin tocar este archivo.
+    // Ejemplo:
+    // <script>
+    //   window.__LASCronicasConfig = {
+    //     videoIds: ['abc123', 'def456'],
+    //     channelId: 'UC123...',
+    //     fetchOnLoad: true,
+    //     disableApi: false
+    //   };
+    // </script>
+    const CLIENT_CONFIG =
+        window.__LASCronicasConfig ||
+        window.__LAS_CRONICAS_CONFIG__ ||
+        window.__LASC_CONFIG__ ||
+        {};
+
+    const STATIC_VIDEO_IDS = [
         // Si quieres probar sin usar la API, pega aquí algunos IDs de vídeo (ej. 'dQw4w9WgXcQ')
         // 'abcdefghijk',
     ];
@@ -309,6 +338,28 @@
     // Si vas a usar la YouTube Data API desde cliente, deja YOUTUBE_API_KEY vacío
     // y pásalo desde tu servidor o desde un archivo privado.
     const YOUTUBE_API_KEY = ''; // <-- NO poner tu API KEY en el repo público
+
+    const PRECONFIGURED_IDS = Array.isArray(CLIENT_CONFIG.videoIds)
+        ? CLIENT_CONFIG.videoIds
+        : [];
+    const channelIdHint = typeof CLIENT_CONFIG.channelId === 'string'
+        ? CLIENT_CONFIG.channelId.trim()
+        : '';
+    const autoFetchEnabled = CLIENT_CONFIG.fetchOnLoad !== false;
+    const disableApiFetch = CLIENT_CONFIG.disableApi === true;
+
+    const countdownDaysEl =
+        document.getElementById('countdownDays') ||
+        document.getElementById('days');
+    const countdownHoursEl =
+        document.getElementById('countdownHours') ||
+        document.getElementById('hours');
+    const countdownMinutesEl =
+        document.getElementById('countdownMinutes') ||
+        document.getElementById('minutes');
+    const countdownSecondsEl =
+        document.getElementById('countdownSeconds') ||
+        document.getElementById('seconds');
 
     // Si quieres leer la key desde un archivo local (no versionado) podrías hacer:
     // <script src="/config.js"></script> donde config.js define window.__YOUTUBE_API_KEY__ = '...';
@@ -331,20 +382,55 @@
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-        document.getElementById('days').textContent = String(days).padStart(2,'0');
-        document.getElementById('hours').textContent = String(hours).padStart(2,'0');
-        document.getElementById('minutes').textContent = String(minutes).padStart(2,'0');
-        document.getElementById('seconds').textContent = String(seconds).padStart(2,'0');
+        if (countdownDaysEl) countdownDaysEl.textContent = String(days).padStart(2,'0');
+        if (countdownHoursEl) countdownHoursEl.textContent = String(hours).padStart(2,'0');
+        if (countdownMinutesEl) countdownMinutesEl.textContent = String(minutes).padStart(2,'0');
+        if (countdownSecondsEl) countdownSecondsEl.textContent = String(seconds).padStart(2,'0');
     }
     // Actualizar cada segundo, usando setInterval sencillo (suficiente para contador)
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
+    if (
+        countdownDaysEl &&
+        countdownHoursEl &&
+        countdownMinutesEl &&
+        countdownSecondsEl
+    ) {
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    } else {
+        console.warn('Elementos del contador no encontrados; verifica el marcado de countdown.');
+    }
 
     // -------------------------------------------------------
     // YOUTUBE PLAYER + carga de IDs
     // -------------------------------------------------------
     let player = null;
-    let channelVideoIds = [...VIDEO_IDS]; // combinar posibles orígenes
+    let channelVideoIds = Array.from(
+        new Set(
+            [...STATIC_VIDEO_IDS, ...PRECONFIGURED_IDS]
+                .filter(id => typeof id === 'string' && id.trim())
+        )
+    );
+    const ctaStatus = document.getElementById('ctaStatus') || document.querySelector('.cta-status');
+
+    function setCtaStatus(message, tone = 'info') {
+        if (!ctaStatus) return;
+        ctaStatus.textContent = message;
+        ctaStatus.classList.toggle('error', tone === 'error');
+    }
+
+    if (channelVideoIds.length) {
+        setCtaStatus(
+            CLIENT_CONFIG.readyMessage ||
+                'Historias malditas listas. Cuando quieras, pulsa el botón.'
+        );
+    } else if (CLIENT_CONFIG.initialStatusMessage) {
+        setCtaStatus(CLIENT_CONFIG.initialStatusMessage);
+    } else if (autoFetchEnabled && !disableApiFetch) {
+        setCtaStatus(
+            CLIENT_CONFIG.loadingMessage ||
+                'Invocando historias desde tu servidor...'
+        );
+    }
 
     // Cargar script de la IFrame API solo si el usuario solicita reproducir
     let ytApiLoaded = false;
@@ -381,6 +467,111 @@
         }
     }
 
+    function normaliseVideoIds(payload) {
+        if (!payload) return [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload.videoIds)) return payload.videoIds;
+        if (typeof payload.videoIds === 'string') return [payload.videoIds];
+        if (Array.isArray(payload.videos)) return payload.videos;
+        if (typeof payload.videos === 'string') return [payload.videos];
+        if (Array.isArray(payload.items)) {
+            return payload.items
+                .map(item => {
+                    if (typeof item === 'string') return item;
+                    if (item && typeof item.id === 'string') return item.id;
+                    if (item && item.id && typeof item.id.videoId === 'string') return item.id.videoId;
+                    return null;
+                })
+                .filter(Boolean);
+        }
+        return [];
+    }
+
+    function mergeVideoIds(ids) {
+        const validIds = ids.filter(id => typeof id === 'string' && id.trim());
+        if (!validIds.length) return;
+        const merged = new Set(channelVideoIds);
+        validIds.forEach(id => merged.add(id));
+        channelVideoIds = Array.from(merged);
+    }
+
+    async function fetchVideosFromServer() {
+        if (disableApiFetch) return false;
+        try {
+            const query = new URLSearchParams();
+            if (channelIdHint) query.set('channelId', channelIdHint);
+            if (CLIENT_CONFIG.maxResults) query.set('maxResults', CLIENT_CONFIG.maxResults);
+
+            const resp = await fetch(`/api/videos${query.toString() ? `?${query.toString()}` : ''}`);
+            const isJson = resp.headers.get('content-type') && resp.headers.get('content-type').includes('application/json');
+            const payload = isJson ? await resp.json() : null;
+            if (!resp.ok) {
+                const serverMessage = payload?.error || payload?.message;
+                throw new Error(serverMessage || `HTTP ${resp.status}`);
+            }
+            const newIds = normaliseVideoIds(payload ?? {});
+            mergeVideoIds(newIds);
+
+            if (newIds.length) {
+                console.log(`Cargados ${newIds.length} vídeos desde el servidor`);
+            }
+
+            if (channelVideoIds.length) {
+                setCtaStatus(
+                    CLIENT_CONFIG.readyMessage ||
+                        'Historias malditas listas. Cuando quieras, pulsa el botón.'
+                );
+            } else {
+                setCtaStatus(
+                    CLIENT_CONFIG.missingVideoMessage ||
+                        'No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.',
+                    'error'
+                );
+            }
+            return channelVideoIds.length > 0;
+        } catch (err) {
+            console.warn('No se pudieron obtener vídeos desde /api/videos:', err);
+            setCtaStatus(
+                CLIENT_CONFIG.fetchErrorMessage ||
+                    'No se pudieron cargar las historias. Verifica en Vercel que YT_API_KEY y CHANNEL_ID estén configurados, o añade IDs manuales en el archivo.',
+                'error'
+            );
+            return false;
+        }
+    }
+
+    async function ensureVideoIdsAvailable(trigger = 'manual') {
+        if (channelVideoIds.length > 0) return true;
+
+        let success = false;
+
+        if (!disableApiFetch) {
+            if (trigger === 'cta' || trigger === 'secondary') {
+                setCtaStatus(
+                    CLIENT_CONFIG.loadingMessage ||
+                        'Invocando historias desde tu servidor...'
+                );
+            }
+            success = await fetchVideosFromServer();
+            if (success && channelVideoIds.length > 0) {
+                return true;
+            }
+        }
+
+        if (channelIdHint && YOUTUBE_API_KEY) {
+            await loadChannelVideosFromApi(channelIdHint);
+            if (channelVideoIds.length > 0) {
+                setCtaStatus(
+                    CLIENT_CONFIG.readyMessage ||
+                        'Historias malditas listas. Cuando quieras, pulsa el botón.'
+                );
+                return true;
+            }
+        }
+
+        return channelVideoIds.length > 0;
+    }
+
     // Función auxiliar: obtener un id aleatorio
     function getRandomVideoId() {
         if (!channelVideoIds || channelVideoIds.length === 0) return null;
@@ -406,14 +597,19 @@
         createPlayer();
     }
 
-    async function playRandomVideo() {
-        // Si no hay IDs locales intentamos cargar desde la API (si tienes channelId y key)
-        if (!getRandomVideoId()) {
-            // Si defines CHANNEL_ID en la llamada, o mejor: llamar a un endpoint servidor para obtener IDs
-            // Aquí NO intento adivinar el channelId: el approach recomendado es proveer video IDs o usar servidor
-            console.warn('No hay videos listados en VIDEO_IDS y no se intentará fetch sin key/ID configurados.');
-            alert('No se encontraron videos. Añade algunos IDs a VIDEO_IDS o configura un servidor para obtenerlos.');
-            return;
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+    async function playRandomVideo(trigger = 'cta') {
+        const ready = await ensureVideoIdsAvailable(trigger);
+        if (!ready) {
+            console.warn('No hay videos disponibles tras los intentos de carga.');
+            setCtaStatus(
+                CLIENT_CONFIG.missingVideoMessage ||
+                    'No se encontraron vídeos aún. Añade IDs manuales o revisa tu función /api/videos.',
+                'error'
+            );
+            alert('No se encontraron videos disponibles. Revisa tu configuración e inténtalo de nuevo.');
+            return false;
         }
 
         try {
@@ -421,6 +617,12 @@
             // Si la API llama a onYouTubeIframeAPIReady creará el player; sino, lo hacemos nosotros si ya está disponible
             if (typeof YT !== 'undefined' && !player) createPlayer();
             const vid = getRandomVideoId();
+            if (!vid) {
+                console.warn('No se pudo seleccionar un video aleatorio.');
+                setCtaStatus('No se pudo seleccionar ninguna historia. Intenta de nuevo.', 'error');
+                alert('No se pudo seleccionar un video. Intenta de nuevo en unos segundos.');
+                return false;
+            }
             if (player && player.loadVideoById) {
                 player.loadVideoById(vid);
             } else {
@@ -432,86 +634,137 @@
                 iframe.frameBorder = '0';
                 iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
                 const playerDiv = document.getElementById('player');
-                playerDiv.innerHTML = '';
-                playerDiv.appendChild(iframe);
+                if (playerDiv) {
+                    playerDiv.innerHTML = '';
+                    playerDiv.appendChild(iframe);
+                } else {
+                    throw new Error('No se encontró el contenedor del reproductor');
+                }
             }
 
             // Mostrar sección de video
-            document.getElementById('ctaSection').style.display = 'none';
+            const ctaSection = document.getElementById('ctaSection');
+            if (ctaSection) {
+                ctaSection.style.display = 'none';
+            }
             const videoSection = document.getElementById('videoSection');
-            videoSection.classList.add('active');
-            videoSection.setAttribute('aria-hidden', 'false');
+            if (videoSection) {
+                videoSection.classList.add('active');
+                videoSection.setAttribute('aria-hidden', 'false');
+            }
+            setCtaStatus('Historia maldita invocada. ¡Disfruta del terror!');
+            return true;
         } catch (err) {
             console.error('Error al reproducir vídeo:', err);
+            setCtaStatus('No se pudo reproducir el vídeo. Revisa la consola o tu configuración y vuelve a intentar.', 'error');
             alert('No se pudo reproducir el vídeo. Revisa la consola para más detalles.');
+            return false;
         }
     }
 
     // -------------------------------------------------------
     // Interacciones y accesibilidad
     // -------------------------------------------------------
-    document.getElementById('year').textContent = new Date().getFullYear();
+    const yearEl = document.getElementById('year');
+    if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+    }
 
     // elementos
-    const bookCover = document.getElementById('bookCover');
-    const ctaButton = document.getElementById('ctaButton');
-    const anotherVideoBtn = document.getElementById('anotherVideoBtn');
-    const backToStartBtn = document.getElementById('backToStartBtn');
+    const bookCover = document.getElementById('bookCover') || document.querySelector('.book-cover');
+    const ctaButton = document.getElementById('ctaButton') || document.querySelector('.cta-button');
+    const anotherVideoBtn = document.getElementById('anotherVideoBtn') || document.querySelector('[data-action="another-video"]');
+    const backToStartBtn = document.getElementById('backToStartBtn') || document.querySelector('[data-action="back-to-start"]');
 
     // hacer que book sea activable por teclado (ya es button, pero añadimos handler)
-    bookCover.addEventListener('click', () => {
-        // animación y luego revelar CTA
-        bookCover.classList.add('opening');
-        setTimeout(() => ctaButton.focus(), 900);
-    });
+    if (bookCover) {
+        bookCover.addEventListener('click', () => {
+            // animación y luego revelar CTA
+            bookCover.classList.add('opening');
+            if (ctaButton) {
+                setTimeout(() => ctaButton.focus(), 900);
+            }
+        });
+    } else {
+        console.warn('No se encontró el botón del libro. Verifica el marcado.');
+    }
 
     // CTA principal
-    ctaButton.addEventListener('click', async () => {
-        ctaButton.setAttribute('aria-pressed', 'true');
-        ctaButton.disabled = true;
-        const originalText = ctaButton.textContent;
-        ctaButton.textContent = '⏳ Cargando historia maldita...';
+    if (ctaButton) {
+        ctaButton.addEventListener('click', async () => {
+            ctaButton.setAttribute('aria-pressed', 'true');
+            ctaButton.disabled = true;
+            const originalText = ctaButton.textContent;
+            ctaButton.textContent = '⏳ Cargando historia maldita...';
+            setCtaStatus('Buscando historias malditas...');
 
-        // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
-        // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
-        //
-        // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
-        // y descomenta la siguiente línea (y añade CHANNEL_ID):
-        // await loadChannelVideosFromApi(CHANNEL_ID);
+            // si tienes un endpoint servidor que devuelve IDs, llámalo aquí.
+            // Ejemplo (recomendado): fetch('/api/videos') -> [{id:'abc'},...]
+            //
+            // Si quieres usar YT Data API (no recomendado en cliente), define YOUTUBE_API_KEY y CHANNEL_ID
+            // y descomenta la siguiente línea (y añade CHANNEL_ID):
+            // await loadChannelVideosFromApi(CHANNEL_ID);
 
-        // Reproducir (usa la lista VIDEO_IDS si la llenaste)
-        await playRandomVideo();
+            // Reproducir (usa la lista STATIC_VIDEO_IDS si la llenaste)
+            await playRandomVideo('cta');
 
-        ctaButton.disabled = false;
-        ctaButton.textContent = originalText;
-        ctaButton.setAttribute('aria-pressed', 'false');
-    });
+            ctaButton.disabled = false;
+            ctaButton.textContent = originalText;
+            ctaButton.setAttribute('aria-pressed', 'false');
+        });
+    } else {
+        console.warn('No se encontró el botón CTA. Asegúrate de conservar el id="ctaButton".');
+    }
 
-    anotherVideoBtn.addEventListener('click', () => {
-        playRandomVideo();
-    });
+    if (anotherVideoBtn) {
+        anotherVideoBtn.addEventListener('click', () => {
+            setCtaStatus('Invocando otra historia maldita...');
+            playRandomVideo('secondary');
+        });
+    }
 
-    backToStartBtn.addEventListener('click', () => {
-        const videoSection = document.getElementById('videoSection');
-        videoSection.classList.remove('active');
-        videoSection.setAttribute('aria-hidden', 'true');
-        document.getElementById('ctaSection').style.display = 'block';
+    if (backToStartBtn) {
+        backToStartBtn.addEventListener('click', () => {
+            const videoSection = document.getElementById('videoSection');
+            if (videoSection) {
+                videoSection.classList.remove('active');
+                videoSection.setAttribute('aria-hidden', 'true');
+            }
+            const ctaSection = document.getElementById('ctaSection');
+            if (ctaSection) {
+                ctaSection.style.display = 'block';
+            }
 
-        // detener player si existe
-        if (player && player.stopVideo) {
-            try { player.stopVideo(); } catch (e) { /* ignore */ }
-        } else {
-            const playerDiv = document.getElementById('player');
-            playerDiv.innerHTML = '';
-        }
+            // detener player si existe
+            if (player && player.stopVideo) {
+                try { player.stopVideo(); } catch (e) { /* ignore */ }
+            } else {
+                const playerDiv = document.getElementById('player');
+                if (playerDiv) playerDiv.innerHTML = '';
+            }
 
-        // reset animación del libro
-        bookCover.classList.remove('opening');
-        bookCover.focus();
-    });
+            // reset animación del libro
+            if (bookCover) {
+                bookCover.classList.remove('opening');
+                bookCover.focus();
+            }
+            setCtaStatus('Cuando quieras, vuelve a invocar una historia maldita.');
+        });
+    }
 
     // Cargar IDs si se ha configurado CHANNEL_ID + KEY (evitar exponer la key en el repo)
     // Ejemplo: if (YOUTUBE_API_KEY && CHANNEL_ID) await loadChannelVideosFromApi(CHANNEL_ID);
+
+    // Intenta precargar la lista de videos desde el servidor (si la función serverless está configurada)
+    if (autoFetchEnabled && !disableApiFetch) {
+        fetchVideosFromServer().catch(() => {});
+    } else if (!channelVideoIds.length) {
+        setCtaStatus(
+            CLIENT_CONFIG.manualSetupMessage ||
+                'Añade al menos un ID de vídeo en STATIC_VIDEO_IDS o expón window.__LASCronicasConfig.videoIds para poder invocar una historia.',
+            'error'
+        );
+    }
 
     // Si quieres pre-cargar la API sin reproducir, puedes llamar ensureYouTubeIframeApi() al inicio:
     // ensureYouTubeIframeApi().catch(()=>{});
