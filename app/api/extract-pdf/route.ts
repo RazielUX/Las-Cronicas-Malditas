@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`✓ Texto extraído: ${text.length} caracteres`)
+    console.log('📝 Primeros 500 caracteres del texto:', text.slice(0, 500))
 
     // Limpiar archivo temporal
     if (tempFilePath) {
@@ -61,6 +62,8 @@ export async function POST(request: NextRequest) {
 
     // Extraer prompts
     const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
+    console.log(`📋 Total de líneas encontradas: ${lines.length}`)
+    console.log('📋 Primeras 10 líneas:', lines.slice(0, 10))
 
     const imagePrompts: string[] = []
     const videoPrompts: string[] = []

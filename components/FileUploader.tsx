@@ -52,12 +52,20 @@ export default function FileUploader() {
 
       const data = await response.json()
 
+      console.log('✅ PDF procesado:', data)
+      console.log('📊 Prompts de imagen extraídos:', data.imagePrompts?.length || 0)
+      console.log('📊 Prompts de video extraídos:', data.videoPrompts?.length || 0)
+      console.log('📝 Primer prompt de imagen:', data.imagePrompts?.[0])
+      console.log('📝 Primer prompt de video:', data.videoPrompts?.[0])
+
+      if (!data.imagePrompts || data.imagePrompts.length === 0) {
+        throw new Error('No se encontraron prompts de imagen en el PDF. Verifica el formato del PDF.')
+      }
+
       initializeScenes({
         imagePrompts: data.imagePrompts,
         videoPrompts: data.videoPrompts
       })
-
-      console.log('✅ PDF procesado:', data)
 
     } catch (err: any) {
       setError(err.message)

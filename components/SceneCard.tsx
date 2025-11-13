@@ -113,6 +113,18 @@ export default function SceneCard({ scene }: SceneCardProps) {
         )}
       </div>
 
+      {/* Debug info - Mostrar prompts */}
+      {scene.imagePrompt && (
+        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+          <strong>📝 Prompt Imagen:</strong> {scene.imagePrompt.slice(0, 100)}...
+        </div>
+      )}
+      {!scene.imagePrompt && (
+        <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+          ⚠️ Sin prompt de imagen
+        </div>
+      )}
+
       {/* Preview de Imagen */}
       <div className="relative aspect-[9/16] bg-gray-100 rounded-lg overflow-hidden">
         {scene.imageUrl ? (
