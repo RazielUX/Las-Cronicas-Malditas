@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { getDocument } from 'pdfjs-dist'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const uint8Array = new Uint8Array(bytes)
 
     // Parsear PDF con pdfjs
-    const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+    const loadingTask = getDocument({ data: uint8Array })
     const pdf = await loadingTask.promise
 
     // Extraer texto de todas las páginas
