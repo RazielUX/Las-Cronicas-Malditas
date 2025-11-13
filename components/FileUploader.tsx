@@ -31,9 +31,21 @@ export default function FileUploader() {
         let errorMessage = 'Error al extraer PDF'
         try {
           const errorData = JSON.parse(text)
-          errorMessage = errorData.error || errorData.details || errorMessage
+          errorMessage = errorData.error || errorMessage
+
+          // Si hay detalles adicionales, mostrarlos
+          if (errorData.details) {
+            if (typeof errorData.details === 'object') {
+              errorMessage += ` (${errorData.details.message || JSON.stringify(errorData.details)})`
+            } else {
+              errorMessage += ` (${errorData.details})`
+            }
+          }
+
+          console.error('Error del servidor:', errorData)
         } catch {
-          errorMessage = text.slice(0, 200) // Mostrar primeros 200 chars del error HTML
+          errorMessage = text.slice(0, 300) // Mostrar primeros 300 chars del error
+          console.error('Error no-JSON:', text)
         }
         throw new Error(errorMessage)
       }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDocument } from 'pdfjs-dist'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,13 +12,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('📄 Procesando PDF:', file.name, file.size, 'bytes')
+
     // Convertir File a Uint8Array
     const bytes = await file.arrayBuffer()
     const uint8Array = new Uint8Array(bytes)
 
+    console.log('✓ PDF convertido a buffer, iniciando extracción...')
+
+    // Importar pdfjs dinámicamente para evitar problemas en build
+    const pdfjs = await import('pdfjs-dist')
+
     // Parsear PDF con pdfjs
-    const loadingTask = getDocument({ data: uint8Array })
+    const loadingTask = pdfjs.getDocument({ data: uint8Array })
     const pdf = await loadingTask.promise
+
+    console.log(`✓ PDF cargado, ${pdf.numPages} páginas encontradas`)
 
     // Extraer texto de todas las páginas
     let text = ''
@@ -31,6 +39,8 @@ export async function POST(request: NextRequest) {
         .join(' ')
       text += pageText + '\n'
     }
+
+    console.log(`✓ Texto extraído: ${text.length} caracteres`)
 
     // Extraer prompts
     const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
@@ -85,6 +95,8 @@ export async function POST(request: NextRequest) {
     const extractedImagePrompts = imagePrompts.slice(0, 16)
     const extractedVideoPrompts = videoPrompts.slice(0, 16)
 
+    console.log(`✓ Prompts extraídos - Imágenes: ${extractedImagePrompts.length}, Videos: ${extractedVideoPrompts.length}`)
+
     return NextResponse.json({
       success: true,
       imagePrompts: extractedImagePrompts,
@@ -96,9 +108,21 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error extrayendo PDF:', error)
+    console.error('❌ Error extrayendo PDF:', error)
+    console.error('Stack:', error.stack)
+
+    const errorMessage = error.message || 'Error desconocido al procesar el PDF'
+    const errorDetails = {
+      message: errorMessage,
+      type: error.name || 'Error',
+      stack: error.stack?.split('\n').slice(0, 3).join('\n') || ''
+    }
+
     return NextResponse.json(
-      { error: 'Error al procesar el PDF', details: error.message },
+      {
+        error: `Error al procesar el PDF: ${errorMessage}`,
+        details: errorDetails
+      },
       { status: 500 }
     )
   }
