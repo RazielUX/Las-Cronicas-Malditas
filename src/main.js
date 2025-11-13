@@ -16,8 +16,6 @@ async function main() {
 
   // 1. Verificar variables de entorno
   const openaiKey = process.env.OPENAI_API_KEY;
-  const videoApiKey = process.env.VIDEO_API_KEY;
-  const videoProvider = process.env.VIDEO_PROVIDER || 'replicate';
 
   if (!openaiKey) {
     console.error('❌ Error: OPENAI_API_KEY no está configurada');
@@ -25,12 +23,8 @@ async function main() {
     process.exit(1);
   }
 
-  if (!videoApiKey) {
-    console.error('❌ Error: VIDEO_API_KEY no está configurada');
-    console.log('   Por favor, añade tu API key para generación de video');
-    console.log(`   Proveedor actual: ${videoProvider}`);
-    process.exit(1);
-  }
+  console.log('✅ OpenAI API Key detectada');
+  console.log('   Se usará para generar imágenes (DALL-E 3) y videos (Sora)\n');
 
   // 2. Buscar el PDF de entrada
   const inputDir = './input';
@@ -82,10 +76,11 @@ async function main() {
     console.log('RESUMEN DE GENERACIÓN');
     console.log('═══════════════════════════════════════════════════════');
     console.log(`📸 Se generarán ${imagePrompts.length} imágenes con DALL-E 3`);
-    console.log(`🎬 Se generarán ${videoPrompts.length} videos con ${videoProvider}`);
+    console.log(`🎬 Se generarán ${videoPrompts.length} videos con Sora (8 segundos, vertical)`);
     console.log(`💰 Costo estimado:`);
     console.log(`   • Imágenes (DALL-E 3 HD): ~$${(imagePrompts.length * 0.08).toFixed(2)} USD`);
-    console.log(`   • Videos (${videoProvider}): Variable según proveedor`);
+    console.log(`   • Videos (Sora): ~$${(videoPrompts.length * 0.32).toFixed(2)} USD`);
+    console.log(`   • Total estimado: ~$${((imagePrompts.length * 0.08) + (videoPrompts.length * 0.32)).toFixed(2)} USD`);
     console.log('\n⏱️  Tiempo estimado: 1-2 horas\n');
 
     // En producción, podrías añadir una confirmación interactiva aquí
@@ -105,13 +100,10 @@ async function main() {
 
     // 6. Generar videos
     console.log('\n═══════════════════════════════════════════════════════');
-    console.log('PASO 3: GENERANDO VIDEOS');
+    console.log('PASO 3: GENERANDO VIDEOS CON SORA (OpenAI)');
     console.log('═══════════════════════════════════════════════════════');
 
-    const videoGenerator = new VideoGenerator({
-      provider: videoProvider,
-      apiKey: videoApiKey
-    });
+    const videoGenerator = new VideoGenerator(openaiKey);
 
     const generatedVideos = await videoGenerator.generateAllVideos(
       generatedImages,

@@ -67,13 +67,14 @@ ls -lh output/videos/
 ## 📱 Formato de los Archivos
 
 ### ✅ FORMATO VERTICAL (9:16)
-- **Imágenes**: 1024x1792 píxeles (vertical)
-- **Videos**: Formato vertical tipo Instagram Stories / TikTok / YouTube Shorts
-- **Perfectos para**: Redes sociales verticales
+- **Imágenes**: 1024x1792 píxeles (vertical, HD)
+- **Videos**: 8 segundos, vertical 9:16, 24 fps
+- **Generados con**: OpenAI DALL-E 3 + Sora
+- **Perfectos para**: Instagram Stories, TikTok, YouTube Shorts, Reels
 
 ### 📄 Archivos:
 - **Imágenes**: PNG de alta calidad
-- **Videos**: MP4 (compatible con todo)
+- **Videos**: MP4 de 8 segundos (compatible con todo)
 
 ## 🎥 Cómo Ver los Videos
 

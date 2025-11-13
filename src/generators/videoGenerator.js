@@ -1,19 +1,26 @@
+import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 
 /**
- * Generador de videos desde imágenes
- * Soporta múltiples APIs de generación de video
+ * Generador de videos usando OpenAI Sora
  */
 export class VideoGenerator {
-  constructor(config = {}) {
-    this.apiProvider = config.provider || 'runway'; // runway, stability, replicate
-    this.apiKey = config.apiKey;
+  constructor(apiKey) {
+    this.openai = new OpenAI({ apiKey });
     this.outputDir = './output/videos';
   }
 
   /**
-   * Genera un video a partir de una imagen y un prompt
+   * Convierte imagen a base64 para enviar a la API
+   */
+  imageToBase64(imagePath) {
+    const imageBuffer = fs.readFileSync(imagePath);
+    return imageBuffer.toString('base64');
+  }
+
+  /**
+   * Genera un video a partir de una imagen y un prompt usando Sora
    * @param {string} imagePath - Ruta de la imagen de entrada
    * @param {string} videoPrompt - Prompt para el video
    * @param {number} index - Índice de la escena
@@ -21,7 +28,7 @@ export class VideoGenerator {
    */
   async generateVideo(imagePath, videoPrompt, index = 0) {
     try {
-      console.log(`\n🎬 Generando video ${index + 1}/16...`);
+      console.log(`\n🎬 Generando video ${index + 1}/16 con Sora...`);
       console.log(`   Imagen: ${path.basename(imagePath)}`);
       console.log(`   Prompt: ${videoPrompt.substring(0, 100)}...`);
 
@@ -30,214 +37,118 @@ export class VideoGenerator {
         fs.mkdirSync(this.outputDir, { recursive: true });
       }
 
+      // Leer imagen como base64
+      const imageBase64 = this.imageToBase64(imagePath);
+
+      // Combinar el prompt con referencia a la imagen
+      const fullPrompt = `Based on the provided image: ${videoPrompt}`;
+
+      console.log('   🎥 Llamando a OpenAI Sora API...');
+
+      // Generar video con Sora
+      // Nota: La API de Sora usa el endpoint de generaciones
+      const response = await this.openai.chat.completions.create({
+        model: "sora-1.0-turbo",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: fullPrompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${imageBase64}`
+                }
+              }
+            ]
+          }
+        ],
+        // Parámetros específicos de Sora
+        max_tokens: 1,
+        temperature: 0.7,
+        // Configuración de video
+        response_format: {
+          type: "video",
+          duration: 8,  // 8 segundos
+          aspect_ratio: "9:16",  // Vertical
+          fps: 24
+        }
+      });
+
+      // Alternativa: Si Sora tiene su propio endpoint específico
+      // const response = await this.openai.videos.generate({
+      //   model: "sora-1.0-turbo",
+      //   prompt: fullPrompt,
+      //   image: `data:image/png;base64,${imageBase64}`,
+      //   duration: 8,
+      //   aspect_ratio: "9:16",
+      //   quality: "standard"
+      // });
+
+      console.log(`   ⏳ Procesando video...`);
+
+      // Extraer la URL del video
+      let videoUrl;
+
+      if (response.data && response.data[0] && response.data[0].url) {
+        videoUrl = response.data[0].url;
+      } else if (response.choices && response.choices[0]) {
+        // Si la respuesta viene en formato de chat
+        videoUrl = response.choices[0].video_url || response.choices[0].url;
+      } else {
+        throw new Error('No se pudo obtener la URL del video de la respuesta');
+      }
+
+      if (!videoUrl) {
+        throw new Error('La API no devolvió una URL de video válida');
+      }
+
+      // Descargar el video
+      console.log('   📥 Descargando video...');
+      const videoResponse = await fetch(videoUrl);
+
+      if (!videoResponse.ok) {
+        throw new Error(`Error al descargar video: ${videoResponse.status}`);
+      }
+
+      const arrayBuffer = await videoResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Guardar el video
       const filename = `video_${String(index + 1).padStart(2, '0')}.mp4`;
       const outputPath = path.join(this.outputDir, filename);
 
-      // Generar video según el proveedor
-      let videoPath;
+      fs.writeFileSync(outputPath, buffer);
 
-      switch (this.apiProvider) {
-        case 'runway':
-          videoPath = await this.generateWithRunway(imagePath, videoPrompt, outputPath);
-          break;
-        case 'stability':
-          videoPath = await this.generateWithStability(imagePath, videoPrompt, outputPath);
-          break;
-        case 'replicate':
-          videoPath = await this.generateWithReplicate(imagePath, videoPrompt, outputPath);
-          break;
-        default:
-          throw new Error(`Proveedor no soportado: ${this.apiProvider}`);
-      }
+      console.log(`   ✅ Video guardado: ${filename} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
 
-      console.log(`   ✅ Video guardado: ${filename}`);
-      return videoPath;
+      return outputPath;
 
     } catch (error) {
       console.error(`   ❌ Error generando video ${index + 1}:`, error.message);
-      throw error;
-    }
-  }
 
-  /**
-   * Genera video con Runway ML Gen-2/Gen-3
-   */
-  async generateWithRunway(imagePath, prompt, outputPath) {
-    console.log('   🎥 Usando Runway ML API...');
-
-    // Leer la imagen en base64
-    const imageBuffer = fs.readFileSync(imagePath);
-    const imageBase64 = imageBuffer.toString('base64');
-
-    try {
-      // Iniciar generación de video
-      const createResponse = await fetch('https://api.runwayml.com/v1/gen2/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          promptText: prompt,
-          init_image: imageBase64,
-          duration: 4, // segundos
-          ratio: "16:9"
-        })
-      });
-
-      if (!createResponse.ok) {
-        throw new Error(`Runway API error: ${createResponse.status}`);
+      // Si es un error de API, mostrar más detalles
+      if (error.response) {
+        console.error('   📋 Detalles del error:', error.response.data);
       }
 
-      const createData = await createResponse.json();
-      const taskId = createData.id;
-
-      console.log(`   ⏳ Procesando video (ID: ${taskId})...`);
-
-      // Polling para esperar a que el video esté listo
-      let videoUrl = null;
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutos máximo
-
-      while (!videoUrl && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
-
-        const statusResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`
-          }
-        });
-
-        const statusData = await statusResponse.json();
-
-        if (statusData.status === 'SUCCEEDED') {
-          videoUrl = statusData.output[0];
-        } else if (statusData.status === 'FAILED') {
-          throw new Error('Video generation failed');
-        }
-
-        attempts++;
-      }
-
-      if (!videoUrl) {
-        throw new Error('Video generation timeout');
-      }
-
-      // Descargar el video
-      const videoResponse = await fetch(videoUrl);
-      const arrayBuffer = await videoResponse.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      fs.writeFileSync(outputPath, buffer);
-
-      return outputPath;
-
-    } catch (error) {
-      console.error('   ❌ Error en Runway API:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Genera video con Stability AI Video
-   */
-  async generateWithStability(imagePath, prompt, outputPath) {
-    console.log('   🎥 Usando Stability AI Video API...');
-
-    // Implementación similar a Runway
-    // https://platform.stability.ai/docs/api-reference#tag/v2betastable-image
-
-    throw new Error('Stability AI Video aún no implementado. Usa "runway" como provider.');
-  }
-
-  /**
-   * Genera video con Replicate (ej: Stable Video Diffusion)
-   */
-  async generateWithReplicate(imagePath, prompt, outputPath) {
-    console.log('   🎥 Usando Replicate API (Stable Video Diffusion)...');
-
-    const imageBuffer = fs.readFileSync(imagePath);
-    const imageBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-    try {
-      // Crear predicción
-      const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          version: "3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438", // Stable Video Diffusion
-          input: {
-            image: imageBase64,
-            motion_bucket_id: 127,
-            fps: 24,
-            frames_per_second: 24
-          }
-        })
-      });
-
-      if (!createResponse.ok) {
-        throw new Error(`Replicate API error: ${createResponse.status}`);
-      }
-
-      const prediction = await createResponse.json();
-      const predictionId = prediction.id;
-
-      console.log(`   ⏳ Procesando video (ID: ${predictionId})...`);
-
-      // Polling
-      let videoUrl = null;
-      let attempts = 0;
-      const maxAttempts = 60;
-
-      while (!videoUrl && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-          headers: {
-            'Authorization': `Token ${this.apiKey}`
-          }
-        });
-
-        const statusData = await statusResponse.json();
-
-        if (statusData.status === 'succeeded') {
-          videoUrl = statusData.output;
-        } else if (statusData.status === 'failed') {
-          throw new Error('Video generation failed');
-        }
-
-        attempts++;
-      }
-
-      if (!videoUrl) {
-        throw new Error('Video generation timeout');
-      }
-
-      // Descargar el video
-      const videoResponse = await fetch(videoUrl);
-      const arrayBuffer = await videoResponse.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      fs.writeFileSync(outputPath, buffer);
-
-      return outputPath;
-
-    } catch (error) {
-      console.error('   ❌ Error en Replicate API:', error.message);
       throw error;
     }
   }
 
   /**
    * Genera todos los videos del proyecto
+   * @param {Array<string>} imagePaths - Array de rutas de imágenes
+   * @param {Array<string>} videoPrompts - Array de prompts de video
+   * @returns {Promise<Array<string>>} - Array de rutas de videos generados
    */
   async generateAllVideos(imagePaths, videoPrompts) {
-    console.log('\n🚀 Iniciando generación de videos...');
+    console.log('\n🚀 Iniciando generación de videos con OpenAI Sora...');
     console.log(`   Total de videos a generar: ${imagePaths.length}`);
-    console.log(`   Proveedor: ${this.apiProvider}`);
+    console.log(`   Configuración: 8 segundos, formato vertical (9:16), 24 fps`);
 
     const generatedVideos = [];
 
@@ -252,7 +163,7 @@ export class VideoGenerator {
         const videoPath = await this.generateVideo(imagePaths[i], videoPrompts[i], i);
         generatedVideos.push(videoPath);
 
-        // Pausa entre generaciones
+        // Pausa entre generaciones para evitar rate limits
         if (i < imagePaths.length - 1) {
           console.log('   ⏳ Esperando 5 segundos antes del siguiente video...');
           await new Promise(resolve => setTimeout(resolve, 5000));
@@ -261,6 +172,12 @@ export class VideoGenerator {
       } catch (error) {
         console.error(`   ❌ Falló la generación de video ${i + 1}, continuando...`);
         generatedVideos.push(null);
+
+        // Si es un error de rate limit, esperar más tiempo
+        if (error.message && error.message.includes('rate_limit')) {
+          console.log('   ⏳ Rate limit alcanzado, esperando 60 segundos...');
+          await new Promise(resolve => setTimeout(resolve, 60000));
+        }
       }
     }
 

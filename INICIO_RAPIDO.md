@@ -1,58 +1,55 @@
 # 🚀 Inicio Rápido - Generador de Videos
 
 ## ✅ FORMATO VERTICAL (9:16) - Ideal para TikTok/Instagram/Shorts
+## ✅ TODO CON OPENAI - DALL-E 3 + Sora
 
-## En 5 pasos:
+---
 
-### 1️⃣ Configurar API Keys
+## 🎉 ¡YA ESTÁ CONFIGURADO!
 
-**¡YA ESTÁ CONFIGURADA TU API DE OPENAI!** ✅
+Tu API key de OpenAI ya está lista. No necesitas nada más.
 
-Solo necesitas añadir la API de video:
+- ✅ **Imágenes**: DALL-E 3 (1024x1792 vertical)
+- ✅ **Videos**: Sora (8 segundos, vertical 9:16)
+- ✅ **Una sola API key** para todo
 
-```bash
-# Edita el archivo .env
-nano .env  # o usa tu editor favorito
-```
+---
 
-Reemplaza esta línea:
-```
-VIDEO_API_KEY=PENDIENTE_AÑADIR_TU_KEY_AQUI
-```
+## 📝 En 3 pasos:
 
-Con tu API key de Replicate (consíguela GRATIS en https://replicate.com/account/api-tokens)
-```
-VIDEO_API_KEY=r8_xxxxx
-```
-
-### 2️⃣ Preparar tu PDF
+### 1️⃣ Preparar tu PDF
 
 Crea un documento con este formato:
 
 ```
 Imagen 1:
-Tu prompt de imagen aquí...
+Un castillo gótico en la montaña, niebla, luna llena...
 
 Video 1:
-Tu prompt de video aquí...
+La cámara se acerca al castillo, la niebla se mueve...
 
 Imagen 2:
-...
+Interior de biblioteca antigua...
+
+Video 2:
+Las velas parpadean...
+
+[... hasta Imagen 16 / Video 16]
 ```
 
-Ver `EJEMPLO_FORMATO_PDF.txt` para un ejemplo completo.
+📄 Ver `EJEMPLO_FORMATO_PDF.txt` para un ejemplo completo.
 
-### 3️⃣ Colocar archivos
+### 2️⃣ Colocar archivos
 
 ```bash
 # Tu PDF
 cp tu_guion.pdf input/
 
-# Referencias (opcional)
+# Referencias (opcional pero recomendado)
 cp ref1.jpg ref2.jpg ref3.jpg ref4.jpg input/references/
 ```
 
-### 4️⃣ Ejecutar
+### 3️⃣ Ejecutar
 
 ```bash
 npm run generate
@@ -63,11 +60,7 @@ O directamente:
 node src/main.js
 ```
 
-### 5️⃣ Esperar y disfrutar
-
-- ⏱️ Imágenes: ~10 minutos
-- ⏱️ Videos: ~1-2 horas
-- 📁 Resultados en: `./output/`
+---
 
 ## 🎬 ¿DÓNDE VER MIS VIDEOS?
 
@@ -80,7 +73,7 @@ output/
 │   ├── scene_02.png
 │   └── ...
 ├── videos/
-│   ├── video_01.mp4    ← 🎥 Tus 16 videos (formato vertical)
+│   ├── video_01.mp4    ← 🎥 Tus 16 videos (8 seg, vertical 9:16)
 │   ├── video_02.mp4
 │   └── ...
 └── manifest.json       ← 📋 Resumen completo
@@ -107,61 +100,51 @@ xdg-open output/videos
 
 ---
 
-## 📋 Obtener API Keys
-
-### OpenAI (para imágenes):
-1. Ve a https://platform.openai.com/api-keys
-2. Crea una nueva key
-3. Añade $5-10 USD de crédito
-4. Copia la key a `.env`
-
-### Replicate (para videos):
-1. Ve a https://replicate.com/
-2. Crea cuenta
-3. Ve a Account → API Tokens
-4. Copia el token a `.env`
-
----
-
 ## 💰 Costos
 
+Con OpenAI (DALL-E 3 + Sora):
+
 - **16 imágenes DALL-E 3**: ~$1.28 USD
-- **16 videos Replicate**: ~$0.20 USD
-- **Total**: ~$1.50 USD
+- **16 videos Sora (8 seg)**: ~$5.12 USD
+- **Total**: ~**$6.40 USD** por proyecto completo
+
+Mucho mejor que usar múltiples APIs. Todo en un solo lugar.
 
 ---
 
-## 📖 Documentación completa
+## ⏱️ Tiempos
 
-Ver `GENERATOR_README.md` para la guía completa.
-
----
-
-## 🆘 Ayuda Rápida
-
-**Error: No se encuentra el PDF**
-```bash
-ls input/  # Verifica que tu PDF está ahí
-```
-
-**Error: API Key inválida**
-```bash
-cat .env  # Verifica tus keys
-```
-
-**Los prompts no se detectan**
-- Usa exactamente: "Imagen 1:", "Video 1:", etc.
-- Números consecutivos del 1 al 16
+- ⚡ Extracción del PDF: Instantáneo
+- 🎨 Generación de 16 imágenes: ~10 minutos
+- 🎬 Generación de 16 videos: ~30-60 minutos
+- **Total**: ~1 hora automático
 
 ---
 
 ## ✅ Checklist antes de ejecutar
 
-- [ ] Archivo `.env` creado con API keys válidas
+- [x] Archivo `.env` con tu API key de OpenAI ✅ **YA ESTÁ**
 - [ ] PDF en `./input/` con formato correcto
 - [ ] (Opcional) 4 imágenes de referencia en `./input/references/`
-- [ ] Suficiente crédito en OpenAI (~$2 USD)
+- [ ] Suficiente crédito en OpenAI (~$7 USD)
 - [ ] Conexión a internet estable
+
+---
+
+## 🆘 Si tienes problemas
+
+**El PDF no se detecta:**
+```bash
+ls input/  # Verifica que tu PDF está ahí
+```
+
+**Error de API:**
+- Verifica que tienes crédito en OpenAI
+- Revisa tu API key en https://platform.openai.com/api-keys
+
+**Los prompts no se extraen:**
+- Usa exactamente: "Imagen 1:", "Video 1:", etc.
+- Números consecutivos del 1 al 16
 
 ---
 
