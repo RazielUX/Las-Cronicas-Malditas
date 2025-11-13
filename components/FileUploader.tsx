@@ -26,11 +26,19 @@ export default function FileUploader() {
         body: formData,
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Error al extraer PDF')
+        const text = await response.text()
+        let errorMessage = 'Error al extraer PDF'
+        try {
+          const errorData = JSON.parse(text)
+          errorMessage = errorData.error || errorData.details || errorMessage
+        } catch {
+          errorMessage = text.slice(0, 200) // Mostrar primeros 200 chars del error HTML
+        }
+        throw new Error(errorMessage)
       }
+
+      const data = await response.json()
 
       initializeScenes({
         imagePrompts: data.imagePrompts,

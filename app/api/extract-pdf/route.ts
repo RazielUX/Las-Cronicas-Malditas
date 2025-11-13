@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import * as pdfParse from 'pdf-parse'
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,14 +13,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convertir File a Buffer
+    // Convertir File a Uint8Array
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    const uint8Array = new Uint8Array(bytes)
 
-    // Parsear PDF
-    // @ts-ignore - pdf-parse types issue
-    const data = await pdfParse.default(buffer)
-    const text = data.text
+    // Parsear PDF con pdfjs
+    const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+    const pdf = await loadingTask.promise
+
+    // Extraer texto de todas las páginas
+    let text = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+      text += pageText + '\n'
+    }
 
     // Extraer prompts
     const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
