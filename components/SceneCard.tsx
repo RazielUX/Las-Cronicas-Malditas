@@ -36,9 +36,17 @@ export default function SceneCard({ scene }: SceneCardProps) {
         throw new Error(errorMsg)
       }
 
+      // Mostrar warning si se usó versión sanitizada
+      if (data.usedSanitized) {
+        console.warn(`⚠️ Escena ${scene.id}: ${data.warning}`)
+      }
+
       updateScene(scene.id, {
         imageUrl: data.imageUrl,
-        imageStatus: 'completed'
+        imageStatus: 'completed',
+        ...(data.usedSanitized ? {
+          error: '⚠️ ' + data.warning
+        } : {})
       })
 
       console.log(`✅ Imagen generada para escena ${scene.id}`)

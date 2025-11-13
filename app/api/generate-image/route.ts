@@ -1,6 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
+// Función para sanitizar y acortar prompts que OpenAI rechaza
+function sanitizePrompt(originalPrompt: string): string {
+  let sanitized = originalPrompt
+
+  // Remover palabras que pueden activar filtros de seguridad
+  const bannedWords = [
+    /\bsangre\b/gi, /\bensangrentad[oa]\b/gi, /\bcuerpos?\s+(sin\s+vida|muertos?)\b/gi,
+    /\brostros?\s+pálidos?\s+y\s+sin\s+vida\b/gi, /\bojos?\s+abiertos?\s+mirando\s+al\s+vacío\b/gi,
+    /\bescena\s+del\s+crimen\s+explícita\b/gi, /\bmano\s+femenina\s+ensangrentada\b/gi,
+    /\bcharco\b/gi, /\bderramada\b/gi, /\bforcejeo\b/gi, /\bbrutal\b/gi, /\bangustiante\b/gi,
+    /\bexplícit[oa]\b/gi, /\bcrud[oa]\b/gi, /\bmanchad[oa]\s+de\s+sangre\b/gi,
+    /\bextremidades\s+manchadas\b/gi, /\bsábana\s+blanca.*sangre\b/gi
+  ]
+
+  bannedWords.forEach(regex => {
+    sanitized = sanitized.replace(regex, '')
+  })
+
+  // Acortar si es muy largo (DALL-E 3 prefiere prompts < 1000 caracteres)
+  if (sanitized.length > 1000) {
+    // Extraer solo las partes esenciales
+    const essentials = []
+
+    // Mantener formato y estilo visual
+    const formatMatch = sanitized.match(/Vertical\s+9:16[^.]*/)
+    if (formatMatch) essentials.push(formatMatch[0])
+
+    // Mantener descripción principal
+    const mainDescMatch = sanitized.match(/(?:Plano|Tight|Split-screen)[^.]{0,300}/)
+    if (mainDescMatch) essentials.push(mainDescMatch[0])
+
+    // Mantener paleta de colores
+    const paletteMatch = sanitized.match(/Color palette:[^.]{0,200}/)
+    if (paletteMatch) essentials.push(paletteMatch[0])
+
+    sanitized = essentials.join('. ') + '.'
+  }
+
+  // Limpiar múltiples espacios y puntos
+  sanitized = sanitized.replace(/\s+/g, ' ').replace(/\.+/g, '.').trim()
+
+  return sanitized
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -26,30 +70,78 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`🎨 Generando imagen para escena ${sceneId}...`)
+    console.log(`📏 Longitud del prompt: ${prompt.length} caracteres`)
 
-    // Generar imagen con DALL-E 3
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1792", // Formato vertical
-      quality: "hd",
-      style: "vivid"
-    })
+    let finalPrompt = prompt
+    let usedSanitized = false
 
-    const imageUrl = response.data?.[0]?.url
+    try {
+      // Primer intento con prompt original
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: finalPrompt,
+        n: 1,
+        size: "1024x1792", // Formato vertical
+        quality: "hd",
+        style: "vivid"
+      })
 
-    if (!imageUrl) {
-      throw new Error('No se recibió URL de imagen')
+      const imageUrl = response.data?.[0]?.url
+
+      if (!imageUrl) {
+        throw new Error('No se recibió URL de imagen')
+      }
+
+      console.log(`✅ Imagen generada para escena ${sceneId}`)
+
+      return NextResponse.json({
+        success: true,
+        imageUrl: imageUrl,
+        sceneId: sceneId,
+        usedSanitized: false
+      })
+
+    } catch (firstError: any) {
+      // Si falla por contenido prohibido, intentar con versión sanitizada
+      if (firstError.status === 400 && firstError.message?.includes('safety system')) {
+        console.log(`⚠️ Prompt rechazado por seguridad, intentando con versión sanitizada...`)
+
+        finalPrompt = sanitizePrompt(prompt)
+        console.log(`📏 Longitud del prompt sanitizado: ${finalPrompt.length} caracteres`)
+        console.log(`🔄 Prompt sanitizado: ${finalPrompt.slice(0, 200)}...`)
+
+        usedSanitized = true
+
+        // Segundo intento con prompt sanitizado
+        const response = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: finalPrompt,
+          n: 1,
+          size: "1024x1792",
+          quality: "hd",
+          style: "vivid"
+        })
+
+        const imageUrl = response.data?.[0]?.url
+
+        if (!imageUrl) {
+          throw new Error('No se recibió URL de imagen')
+        }
+
+        console.log(`✅ Imagen generada para escena ${sceneId} (versión sanitizada)`)
+
+        return NextResponse.json({
+          success: true,
+          imageUrl: imageUrl,
+          sceneId: sceneId,
+          usedSanitized: true,
+          warning: 'Prompt modificado por políticas de OpenAI'
+        })
+      }
+
+      // Si no es error de seguridad, lanzar el error original
+      throw firstError
     }
-
-    console.log(`✅ Imagen generada para escena ${sceneId}`)
-
-    return NextResponse.json({
-      success: true,
-      imageUrl: imageUrl,
-      sceneId: sceneId
-    })
 
   } catch (error: any) {
     console.error('❌ Error generando imagen:', error)
