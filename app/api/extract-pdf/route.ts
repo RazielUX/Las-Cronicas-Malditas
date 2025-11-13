@@ -60,55 +60,38 @@ export async function POST(request: NextRequest) {
       tempFilePath = null
     }
 
-    // Extraer prompts
-    const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
-    console.log(`📋 Total de líneas encontradas: ${lines.length}`)
-    console.log('📋 Primeras 10 líneas:', lines.slice(0, 10))
+    // Extraer prompts con el formato específico del usuario
+    console.log('🔍 Buscando prompts con formato: PROMPT DE IMAGEN / PROMPT DE VIDEO')
 
     const imagePrompts: string[] = []
     const videoPrompts: string[] = []
 
-    let currentSection: 'image' | 'video' | null = null
-    let currentPrompt = ''
+    // Dividir el texto en secciones por VIDEO X
+    const videoSections = text.split(/VIDEO\s+\d+/i).filter(section => section.trim().length > 0)
+    console.log(`📦 Secciones VIDEO encontradas: ${videoSections.length}`)
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+    for (let i = 0; i < videoSections.length; i++) {
+      const section = videoSections[i]
 
-      // Detectar secciones de imagen
-      if (line.match(/^(Imagen|Image|Prompt\s+Imagen|Image\s+Prompt)\s*\d+/i)) {
-        if (currentPrompt && currentSection === 'image') {
-          imagePrompts.push(currentPrompt.trim())
+      // Extraer prompt de imagen
+      const imageMatch = section.match(/PROMPT\s+DE\s+IMAGEN[^:]*:([\s\S]*?)(?=PROMPT\s+DE\s+VIDEO|$)/i)
+      if (imageMatch && imageMatch[1]) {
+        const imagePrompt = imageMatch[1].trim()
+        if (imagePrompt.length > 10) { // Validar que no esté vacío
+          imagePrompts.push(imagePrompt)
+          console.log(`✅ Imagen ${imagePrompts.length}: ${imagePrompt.slice(0, 80)}...`)
         }
-        currentSection = 'image'
-        currentPrompt = ''
-        continue
       }
 
-      // Detectar secciones de video
-      if (line.match(/^(Video|Prompt\s+Video|Video\s+Prompt)\s*\d+/i)) {
-        if (currentPrompt && currentSection === 'image') {
-          imagePrompts.push(currentPrompt.trim())
+      // Extraer prompt de video
+      const videoMatch = section.match(/PROMPT\s+DE\s+VIDEO[^:]*:([\s\S]*?)(?=VIDEO\s+\d+|$)/i)
+      if (videoMatch && videoMatch[1]) {
+        const videoPrompt = videoMatch[1].trim()
+        if (videoPrompt.length > 10) { // Validar que no esté vacío
+          videoPrompts.push(videoPrompt)
+          console.log(`✅ Video ${videoPrompts.length}: ${videoPrompt.slice(0, 80)}...`)
         }
-        if (currentPrompt && currentSection === 'video') {
-          videoPrompts.push(currentPrompt.trim())
-        }
-        currentSection = 'video'
-        currentPrompt = ''
-        continue
       }
-
-      // Acumular líneas del prompt actual
-      if (currentSection) {
-        currentPrompt += (currentPrompt ? ' ' : '') + line
-      }
-    }
-
-    // Añadir el último prompt
-    if (currentPrompt && currentSection === 'image') {
-      imagePrompts.push(currentPrompt.trim())
-    }
-    if (currentPrompt && currentSection === 'video') {
-      videoPrompts.push(currentPrompt.trim())
     }
 
     // Validación
