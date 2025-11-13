@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import PDFParser from 'pdf2json'
+import { writeFileSync, unlinkSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
 
 export async function POST(request: NextRequest) {
+  let tempFilePath: string | null = null
+
   try {
     const formData = await request.formData()
     const file = formData.get('pdf') as File
@@ -14,41 +20,43 @@ export async function POST(request: NextRequest) {
 
     console.log('📄 Procesando PDF:', file.name, file.size, 'bytes')
 
-    // Convertir File a Uint8Array
+    // Convertir File a Buffer
     const bytes = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(bytes)
+    const buffer = Buffer.from(bytes)
 
-    console.log('✓ PDF convertido a buffer, iniciando extracción...')
+    // Guardar temporalmente el archivo
+    tempFilePath = join(tmpdir(), `pdf-${Date.now()}.pdf`)
+    writeFileSync(tempFilePath, buffer)
 
-    // Importar pdfjs dinámicamente para evitar problemas en build
-    const pdfjs = await import('pdfjs-dist')
+    console.log('✓ PDF guardado temporalmente, iniciando extracción...')
 
-    // Deshabilitar worker para entorno serverless
-    pdfjs.GlobalWorkerOptions.workerSrc = ''
+    // Parsear PDF con pdf2json
+    const pdfParser = new (PDFParser as any)(null, 1)
 
-    // Parsear PDF con pdfjs (sin worker)
-    const loadingTask = pdfjs.getDocument({
-      data: uint8Array,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
+    const text = await new Promise<string>((resolve, reject) => {
+      pdfParser.on('pdfParser_dataError', (errData: any) => {
+        reject(new Error(errData.parserError))
+      })
+
+      pdfParser.on('pdfParser_dataReady', () => {
+        try {
+          const rawText = (pdfParser as any).getRawTextContent()
+          resolve(rawText)
+        } catch (err) {
+          reject(err)
+        }
+      })
+
+      pdfParser.loadPDF(tempFilePath)
     })
-    const pdf = await loadingTask.promise
-
-    console.log(`✓ PDF cargado, ${pdf.numPages} páginas encontradas`)
-
-    // Extraer texto de todas las páginas
-    let text = ''
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-      text += pageText + '\n'
-    }
 
     console.log(`✓ Texto extraído: ${text.length} caracteres`)
+
+    // Limpiar archivo temporal
+    if (tempFilePath) {
+      unlinkSync(tempFilePath)
+      tempFilePath = null
+    }
 
     // Extraer prompts
     const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
@@ -118,6 +126,15 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error extrayendo PDF:', error)
     console.error('Stack:', error.stack)
+
+    // Limpiar archivo temporal si existe
+    if (tempFilePath) {
+      try {
+        unlinkSync(tempFilePath)
+      } catch (cleanupError) {
+        console.error('Error limpiando archivo temporal:', cleanupError)
+      }
+    }
 
     const errorMessage = error.message || 'Error desconocido al procesar el PDF'
     const errorDetails = {
