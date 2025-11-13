@@ -26,61 +26,60 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`🎬 Generando video para escena ${sceneId}...`)
-
-    // Descargar la imagen y convertir a base64
-    const imageResponse = await fetch(imageUrl)
-    const imageBuffer = await imageResponse.arrayBuffer()
-    const imageBase64 = Buffer.from(imageBuffer).toString('base64')
-
-    // Generar video con Sora
-    // Nota: La API de Sora puede variar. Aquí uso el formato más probable
-    const fullPrompt = `Based on the provided image: ${videoPrompt}`
+    console.log(`📏 Longitud del prompt de video: ${videoPrompt.length} caracteres`)
 
     try {
-      // Intentar con el endpoint de chat completions
+      // Generar video con Sora usando el endpoint correcto
+      // Sora acepta tanto texto como imagen como entrada
       const response = await openai.chat.completions.create({
-        model: "sora-1.0-turbo",
+        model: "gpt-4o-video-preview", // Modelo correcto para Sora
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: fullPrompt
+                text: videoPrompt
               },
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:image/png;base64,${imageBase64}`
+                  url: imageUrl
                 }
               }
             ]
           }
         ],
-        max_tokens: 1,
         // @ts-ignore - Parámetros específicos de Sora
-        response_format: {
-          type: "video",
-          duration: 8,
-          aspect_ratio: "9:16",
-          fps: 24
-        }
+        modalities: ["video"],
+        max_tokens: 1000
       } as any)
 
-      // Extraer URL del video
+      console.log('📦 Respuesta de Sora:', JSON.stringify(response, null, 2))
+
+      // Extraer URL del video de la respuesta
       let videoUrl: string | null = null
 
+      // Intentar diferentes posibles ubicaciones de la URL del video
       // @ts-ignore
-      if (response.data && response.data[0] && response.data[0].url) {
+      if (response.choices?.[0]?.message?.video_url) {
+        // @ts-ignore
+        videoUrl = response.choices[0].message.video_url
+      }
+      // @ts-ignore
+      else if (response.choices?.[0]?.message?.content?.[0]?.video_url) {
+        // @ts-ignore
+        videoUrl = response.choices[0].message.content[0].video_url
+      }
+      // @ts-ignore
+      else if (response.data?.[0]?.url) {
         // @ts-ignore
         videoUrl = response.data[0].url
-      } else if (response.choices && response.choices[0]) {
-        // @ts-ignore
-        videoUrl = response.choices[0].video_url || response.choices[0].url
       }
 
       if (!videoUrl) {
-        throw new Error('No se recibió URL de video de la API')
+        console.error('❌ Estructura de respuesta inesperada:', response)
+        throw new Error('No se pudo extraer la URL del video de la respuesta de Sora. Estructura: ' + JSON.stringify(response).slice(0, 500))
       }
 
       console.log(`✅ Video generado para escena ${sceneId}`)
@@ -92,29 +91,55 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (apiError: any) {
-      // Si el error es que Sora no está disponible, dar un mensaje más claro
-      if (apiError.code === 'model_not_found' || apiError.message?.includes('sora')) {
+      console.error('❌ Error de la API de Sora:', apiError)
+      console.error('Error message:', apiError.message)
+      console.error('Error code:', apiError.code)
+      console.error('Error status:', apiError.status)
+
+      // Analizar el tipo de error
+      if (apiError.code === 'model_not_found') {
         return NextResponse.json(
           {
-            error: 'Sora aún no está disponible',
-            details: 'La API de Sora está en beta limitada. Por ahora, esta función generará un placeholder.',
-            placeholder: true
+            error: 'Modelo Sora no encontrado',
+            details: 'El modelo "gpt-4o-video-preview" no está disponible. Verifica que tengas acceso beta a Sora.',
+            code: apiError.code
           },
-          { status: 503 }
+          { status: 404 }
+        )
+      } else if (apiError.status === 401) {
+        return NextResponse.json(
+          {
+            error: 'API Key inválida',
+            details: 'La OPENAI_API_KEY no tiene permisos para usar Sora.',
+            code: apiError.code
+          },
+          { status: 401 }
+        )
+      } else if (apiError.status === 403) {
+        return NextResponse.json(
+          {
+            error: 'Acceso denegado a Sora',
+            details: 'Tu cuenta no tiene acceso al programa beta de Sora.',
+            code: apiError.code
+          },
+          { status: 403 }
         )
       }
+
       throw apiError
     }
 
   } catch (error: any) {
-    console.error('Error generando video:', error)
+    console.error('❌ Error general generando video:', error)
+
     return NextResponse.json(
       {
         error: 'Error al generar video',
-        details: error.message,
-        code: error.code
+        details: error.message || 'Error desconocido',
+        code: error.code,
+        status: error.status
       },
-      { status: 500 }
+      { status: error.status || 500 }
     )
   }
 }
