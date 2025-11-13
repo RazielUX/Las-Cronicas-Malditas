@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const text = data.text
 
     // Extraer prompts
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+    const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0)
 
     const imagePrompts: string[] = []
     const videoPrompts: string[] = []
