@@ -23,8 +23,16 @@ export async function POST(request: NextRequest) {
     // Importar pdfjs dinámicamente para evitar problemas en build
     const pdfjs = await import('pdfjs-dist')
 
-    // Parsear PDF con pdfjs
-    const loadingTask = pdfjs.getDocument({ data: uint8Array })
+    // Deshabilitar worker para entorno serverless
+    pdfjs.GlobalWorkerOptions.workerSrc = ''
+
+    // Parsear PDF con pdfjs (sin worker)
+    const loadingTask = pdfjs.getDocument({
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    })
     const pdf = await loadingTask.promise
 
     console.log(`✓ PDF cargado, ${pdf.numPages} páginas encontradas`)
