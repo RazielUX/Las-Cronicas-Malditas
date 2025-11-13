@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import pdf from 'pdf-parse'
+import * as pdfParse from 'pdf-parse'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
 
     // Parsear PDF
-    const data = await pdf(buffer)
+    // @ts-ignore - pdf-parse types issue
+    const data = await pdfParse.default(buffer)
     const text = data.text
 
     // Extraer prompts
