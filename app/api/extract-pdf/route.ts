@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
+// API para extraer texto de PDFs usando pdf2json (compatible con Vercel serverless)
 export async function POST(request: NextRequest) {
   let tempFilePath: string | null = null
 
