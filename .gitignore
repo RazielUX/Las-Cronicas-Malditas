@@ -1,0 +1,29 @@
+# Environment variables
+.env
+
+# Node modules
+node_modules/
+
+# Output files
+output/
+
+# Input files (archivos de usuario)
+input/*.pdf
+input/references/*.jpg
+input/references/*.png
+input/references/*.jpeg
+input/references/*.webp
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

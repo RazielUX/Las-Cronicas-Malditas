@@ -1,1 +1,18 @@
-{"name":"las-cronicas-malditas","version":"1.0.1","private":true,"type":"module","engines":{"node":"22.x"}}
+{
+  "name": "las-cronicas-malditas",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "generate": "node src/main.js",
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "openai": "^6.8.1",
+    "pdf-parse": "^2.4.5"
+  }
+}
