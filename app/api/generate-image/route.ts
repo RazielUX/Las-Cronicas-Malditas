@@ -52,14 +52,38 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error generando imagen:', error)
+    console.error('❌ Error generando imagen:', error)
+    console.error('Error type:', error.constructor.name)
+    console.error('Error message:', error.message)
+    console.error('Error code:', error.code)
+    console.error('Error status:', error.status)
+
+    // Intentar extraer más detalles del error de OpenAI
+    let errorMessage = 'Error al generar imagen'
+    let errorDetails = error.message || 'Error desconocido'
+
+    if (error.status === 401) {
+      errorMessage = 'API Key inválida o expirada'
+      errorDetails = 'La OPENAI_API_KEY configurada no es válida'
+    } else if (error.status === 429) {
+      errorMessage = 'Límite de rate limit alcanzado'
+      errorDetails = 'Demasiadas peticiones. Espera un momento e intenta de nuevo.'
+    } else if (error.status === 400) {
+      errorMessage = 'Petición inválida'
+      errorDetails = error.message || 'El prompt o los parámetros son inválidos'
+    } else if (error.code === 'insufficient_quota') {
+      errorMessage = 'Sin créditos en la cuenta de OpenAI'
+      errorDetails = 'Tu cuenta de OpenAI no tiene créditos suficientes'
+    }
+
     return NextResponse.json(
       {
-        error: 'Error al generar imagen',
-        details: error.message,
-        code: error.code
+        error: errorMessage,
+        details: errorDetails,
+        code: error.code,
+        status: error.status
       },
-      { status: 500 }
+      { status: error.status || 500 }
     )
   }
 }

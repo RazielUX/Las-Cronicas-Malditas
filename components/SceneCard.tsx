@@ -31,7 +31,9 @@ export default function SceneCard({ scene }: SceneCardProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al generar imagen')
+        const errorMsg = data.details || data.error || 'Error al generar imagen'
+        console.error('Error de la API:', data)
+        throw new Error(errorMsg)
       }
 
       updateScene(scene.id, {
@@ -39,7 +41,10 @@ export default function SceneCard({ scene }: SceneCardProps) {
         imageStatus: 'completed'
       })
 
+      console.log(`✅ Imagen generada para escena ${scene.id}`)
+
     } catch (error: any) {
+      console.error(`❌ Error en escena ${scene.id}:`, error.message)
       updateScene(scene.id, {
         imageStatus: 'error',
         error: error.message
