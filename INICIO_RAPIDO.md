@@ -1,18 +1,27 @@
 # 🚀 Inicio Rápido - Generador de Videos
 
+## ✅ FORMATO VERTICAL (9:16) - Ideal para TikTok/Instagram/Shorts
+
 ## En 5 pasos:
 
 ### 1️⃣ Configurar API Keys
 
+**¡YA ESTÁ CONFIGURADA TU API DE OPENAI!** ✅
+
+Solo necesitas añadir la API de video:
+
 ```bash
-cp .env.example .env
+# Edita el archivo .env
 nano .env  # o usa tu editor favorito
 ```
 
-Añade tus keys:
+Reemplaza esta línea:
 ```
-OPENAI_API_KEY=sk-proj-xxxxx
-VIDEO_PROVIDER=replicate
+VIDEO_API_KEY=PENDIENTE_AÑADIR_TU_KEY_AQUI
+```
+
+Con tu API key de Replicate (consíguela GRATIS en https://replicate.com/account/api-tokens)
+```
 VIDEO_API_KEY=r8_xxxxx
 ```
 
@@ -59,6 +68,42 @@ node src/main.js
 - ⏱️ Imágenes: ~10 minutos
 - ⏱️ Videos: ~1-2 horas
 - 📁 Resultados en: `./output/`
+
+## 🎬 ¿DÓNDE VER MIS VIDEOS?
+
+Tus videos estarán en:
+
+```
+output/
+├── images/
+│   ├── scene_01.png    ← 🖼️ Tus 16 imágenes (1024x1792 vertical)
+│   ├── scene_02.png
+│   └── ...
+├── videos/
+│   ├── video_01.mp4    ← 🎥 Tus 16 videos (formato vertical)
+│   ├── video_02.mp4
+│   └── ...
+└── manifest.json       ← 📋 Resumen completo
+```
+
+### Ver los archivos:
+
+**Windows:**
+```bash
+explorer output\videos
+```
+
+**Mac:**
+```bash
+open output/videos
+```
+
+**Linux:**
+```bash
+xdg-open output/videos
+```
+
+**📖 Guía completa:** Ver `DONDE_VER_RESULTADOS.md`
 
 ---
 

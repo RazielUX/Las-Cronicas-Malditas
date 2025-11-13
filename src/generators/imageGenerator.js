@@ -35,7 +35,7 @@ export class ImageGenerator {
         model: "dall-e-3",
         prompt: enhancedPrompt,
         n: 1,
-        size: "1792x1024", // Formato horizontal ideal para video
+        size: "1024x1792", // Formato vertical ideal para videos tipo stories/reels
         quality: "hd",
         style: "vivid" // o "natural" para un estilo más fotorealista
       });
