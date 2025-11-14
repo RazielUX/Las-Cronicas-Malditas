@@ -17,8 +17,12 @@ export default function MassiveMode() {
     // Filtrar solo escenas con prompts
     const validScenes = scenes.filter(s => s.imagePrompt && s.videoPrompt)
 
+    // Array para mantener coherencia visual (últimas 2 imágenes)
+    const previousImageUrls: string[] = []
+    const MAX_REFERENCE_IMAGES = 2
+
     // FASE 1: Generar todas las imágenes
-    console.log('🚀 Iniciando generación masiva de imágenes...')
+    console.log('🚀 Iniciando generación masiva de imágenes con coherencia visual...')
     for (let i = 0; i < validScenes.length; i++) {
       const scene = validScenes[i]
       setCurrentScene(i + 1)
@@ -31,7 +35,8 @@ export default function MassiveMode() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: scene.imagePrompt,
-            sceneId: scene.id
+            sceneId: scene.id,
+            previousImageUrls: previousImageUrls.slice(-MAX_REFERENCE_IMAGES) // Últimas 2 imágenes
           })
         })
 
@@ -45,6 +50,11 @@ export default function MassiveMode() {
           imageUrl: data.imageUrl,
           imageStatus: 'completed'
         })
+
+        // Añadir esta imagen al historial para coherencia visual
+        if (data.imageUrl) {
+          previousImageUrls.push(data.imageUrl)
+        }
 
         setProgress(p => ({ ...p, images: p.images + 1 }))
 

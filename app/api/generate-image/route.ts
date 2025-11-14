@@ -45,10 +45,56 @@ function sanitizePrompt(originalPrompt: string): string {
   return sanitized
 }
 
+// Función para analizar imágenes previas y extraer características visuales
+async function analyzeImageStyle(imageUrls: string[], openai: OpenAI): Promise<string> {
+  if (!imageUrls || imageUrls.length === 0) return ''
+
+  try {
+    console.log(`🔍 Analizando ${imageUrls.length} imagen(es) previa(s) para extraer estilo...`)
+
+    // Analizar cada imagen con GPT-4 Vision
+    const analysisPromises = imageUrls.map(async (url) => {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Analiza esta imagen y extrae SOLO: 1) Paleta de colores dominantes, 2) Estilo artístico/visual, 3) Tipo de iluminación. Sé conciso (max 100 caracteres total)."
+              },
+              {
+                type: "image_url",
+                image_url: { url }
+              }
+            ]
+          }
+        ],
+        max_tokens: 150
+      })
+
+      return response.choices[0].message.content || ''
+    })
+
+    const analyses = await Promise.all(analysisPromises)
+
+    // Combinar análisis y crear prefijo de coherencia
+    const stylePrefix = `[COHERENCIA VISUAL CON IMÁGENES PREVIAS: ${analyses.join('; ')}]`
+    console.log(`✓ Características extraídas: ${stylePrefix.slice(0, 150)}...`)
+
+    return stylePrefix
+
+  } catch (error) {
+    console.warn('⚠️ Error al analizar imágenes previas, continuando sin coherencia:', error)
+    return ''
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { prompt, sceneId } = body
+    const { prompt, sceneId, previousImageUrls = [] } = body
 
     if (!prompt) {
       return NextResponse.json(
@@ -71,8 +117,14 @@ export async function POST(request: NextRequest) {
 
     console.log(`🎨 Generando imagen para escena ${sceneId}...`)
     console.log(`📏 Longitud del prompt: ${prompt.length} caracteres`)
+    if (previousImageUrls.length > 0) {
+      console.log(`🔗 Se usarán ${previousImageUrls.length} imagen(es) como referencia visual`)
+    }
 
-    let finalPrompt = prompt
+    // Analizar imágenes previas para extraer estilo (si existen)
+    const stylePrefix = await analyzeImageStyle(previousImageUrls, openai)
+
+    let finalPrompt = stylePrefix ? `${stylePrefix}\n\n${prompt}` : prompt
     let usedSanitized = false
 
     try {
