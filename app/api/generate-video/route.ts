@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       console.log(`✓ Imagen redimensionada: ${resizedBuffer.length} bytes`)
 
       // Convertir buffer a blob
-      const resizedBlob = new Blob([resizedBuffer], { type: 'image/jpeg' })
+      const resizedBlob = new Blob([new Uint8Array(resizedBuffer)], { type: 'image/jpeg' })
 
       // Crear FormData para multipart/form-data
       const formData = new FormData()
