@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,15 +31,27 @@ export async function POST(request: NextRequest) {
         throw new Error('No se pudo descargar la imagen de DALL-E')
       }
       const imageBlob = await imageResponse.blob()
-      console.log(`✓ Imagen descargada: ${imageBlob.size} bytes`)
+      console.log(`✓ Imagen descargada: ${imageBlob.size} bytes (${imageBlob.type})`)
+
+      // Redimensionar imagen de 1024x1792 (DALL-E) a 720x1280 (Sora)
+      console.log('🔄 Redimensionando imagen de 1024x1792 a 720x1280 para Sora...')
+      const imageBuffer = Buffer.from(await imageBlob.arrayBuffer())
+      const resizedBuffer = await sharp(imageBuffer)
+        .resize(720, 1280, { fit: 'fill' })
+        .jpeg({ quality: 95 })
+        .toBuffer()
+      console.log(`✓ Imagen redimensionada: ${resizedBuffer.length} bytes`)
+
+      // Convertir buffer a blob
+      const resizedBlob = new Blob([resizedBuffer], { type: 'image/jpeg' })
 
       // Crear FormData para multipart/form-data
       const formData = new FormData()
       formData.append('model', 'sora-2') // Usar sora-2 para rapidez (sora-2-pro para calidad)
       formData.append('prompt', videoPrompt)
-      formData.append('size', '1024x1792') // DEBE coincidir con el tamaño de la imagen DALL-E (vertical 9:16)
+      formData.append('size', '720x1280') // Tamaño compatible con Sora (vertical 9:16)
       formData.append('seconds', '8')
-      formData.append('input_reference', imageBlob, 'reference.jpg')
+      formData.append('input_reference', resizedBlob, 'reference.jpg')
 
       // Generar video con Sora usando el endpoint correcto /v1/videos
       console.log('📤 Enviando request a Sora...')
