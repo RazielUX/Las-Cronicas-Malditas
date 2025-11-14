@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Generar video con Sora usando el endpoint correcto /v1/videos
+      // Formato: https://platform.openai.com/docs/api-reference/videos
       const response = await fetch('https://api.openai.com/v1/videos', {
         method: 'POST',
         headers: {
@@ -31,10 +32,12 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          model: "sora-turbo",
           prompt: videoPrompt,
-          image: imageUrl,
+          input_image_url: imageUrl, // Parámetro correcto para la imagen de entrada
           duration: 8,
-          aspect_ratio: "9:16"
+          aspect_ratio: "9:16",
+          resolution: "1080p"
         })
       })
 
