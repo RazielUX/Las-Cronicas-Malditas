@@ -23,22 +23,31 @@ export async function POST(request: NextRequest) {
     console.log(`📏 Longitud del prompt de video: ${videoPrompt.length} caracteres`)
 
     try {
+      // Descargar la imagen de DALL-E para enviarla como archivo
+      console.log('⬇️ Descargando imagen de DALL-E...')
+      const imageResponse = await fetch(imageUrl)
+      if (!imageResponse.ok) {
+        throw new Error('No se pudo descargar la imagen de DALL-E')
+      }
+      const imageBlob = await imageResponse.blob()
+      console.log(`✓ Imagen descargada: ${imageBlob.size} bytes`)
+
+      // Crear FormData para multipart/form-data
+      const formData = new FormData()
+      formData.append('model', 'sora-2') // Usar sora-2 para rapidez (sora-2-pro para calidad)
+      formData.append('prompt', videoPrompt)
+      formData.append('size', '1280x720') // 16:9 horizontal (Sora no soporta 9:16 directamente)
+      formData.append('seconds', '8')
+      formData.append('input_reference', imageBlob, 'reference.jpg')
+
       // Generar video con Sora usando el endpoint correcto /v1/videos
-      // Formato: https://platform.openai.com/docs/api-reference/videos
+      console.log('📤 Enviando request a Sora...')
       const response = await fetch('https://api.openai.com/v1/videos', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: "sora-turbo",
-          prompt: videoPrompt,
-          input_image_url: imageUrl, // Parámetro correcto para la imagen de entrada
-          duration: 8,
-          aspect_ratio: "9:16",
-          resolution: "1080p"
-        })
+        body: formData
       })
 
       console.log('📦 Status de respuesta:', response.status, response.statusText)
@@ -60,33 +69,26 @@ export async function POST(request: NextRequest) {
       const data = await response.json()
       console.log('📦 Respuesta completa de Sora:', JSON.stringify(data, null, 2))
 
-      // Extraer URL del video de la respuesta
-      let videoUrl: string | null = null
-
-      // Intentar diferentes posibles ubicaciones de la URL del video
-      if (data.url) {
-        videoUrl = data.url
-      } else if (data.video_url) {
-        videoUrl = data.video_url
-      } else if (data.data && data.data[0] && data.data[0].url) {
-        videoUrl = data.data[0].url
-      } else if (data.id) {
-        // Si solo devuelve un ID, necesitamos hacer polling para obtener el video
-        console.log(`⏳ Video en proceso, ID: ${data.id}. Iniciando polling...`)
-        videoUrl = await pollVideoStatus(data.id, process.env.OPENAI_API_KEY!)
+      // La respuesta inicial contiene un ID y status
+      // Necesitamos hacer polling hasta que esté "completed"
+      if (!data.id) {
+        console.error('❌ Respuesta sin ID:', data)
+        throw new Error('La respuesta de Sora no contiene un ID de video')
       }
 
-      if (!videoUrl) {
-        console.error('❌ Estructura de respuesta inesperada:', data)
-        throw new Error('No se pudo extraer la URL del video de la respuesta de Sora. Estructura: ' + JSON.stringify(data).slice(0, 500))
-      }
+      console.log(`⏳ Video creado con ID: ${data.id}, status inicial: ${data.status}`)
+      console.log(`🔄 Iniciando polling para monitorear progreso...`)
 
-      console.log(`✅ Video generado para escena ${sceneId}`)
+      // Hacer polling del estado del video
+      const videoUrl = await pollVideoStatus(data.id, process.env.OPENAI_API_KEY!)
+
+      console.log(`✅ Video completado para escena ${sceneId}: ${videoUrl}`)
 
       return NextResponse.json({
         success: true,
         videoUrl: videoUrl,
-        sceneId: sceneId
+        sceneId: sceneId,
+        videoId: data.id
       })
 
     } catch (apiError: any) {
@@ -115,13 +117,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Función para hacer polling del estado del video si Sora devuelve un job ID
-async function pollVideoStatus(videoId: string, apiKey: string, maxAttempts = 60): Promise<string> {
-  console.log(`🔄 Polling video status para ID: ${videoId}`)
+// Función para hacer polling del estado del video según la documentación de Sora
+async function pollVideoStatus(videoId: string, apiKey: string, maxAttempts = 120): Promise<string> {
+  console.log(`🔄 Iniciando polling para video ID: ${videoId}`)
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 5000)) // Esperar 5 segundos
+    // Esperar antes de cada check (10 segundos)
+    await new Promise(resolve => setTimeout(resolve, 10000))
 
+    // Obtener el estado actual del video
     const response = await fetch(`https://api.openai.com/v1/videos/${videoId}`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`
@@ -130,21 +134,35 @@ async function pollVideoStatus(videoId: string, apiKey: string, maxAttempts = 60
 
     if (!response.ok) {
       console.error(`❌ Error checking video status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Error details:', errorText)
       continue
     }
 
     const data = await response.json()
-    console.log(`📊 Intento ${attempt + 1}/${maxAttempts} - Estado: ${data.status}`)
+    const progress = data.progress || 0
+    console.log(`📊 Intento ${attempt + 1}/${maxAttempts} - Estado: ${data.status}, Progreso: ${progress}%`)
 
-    if (data.status === 'completed' && data.url) {
-      console.log(`✅ Video completado: ${data.url}`)
-      return data.url
+    if (data.status === 'completed') {
+      console.log(`✅ Video completado! Descargando contenido...`)
+
+      // Descargar el video usando el endpoint /content
+      const downloadUrl = `https://api.openai.com/v1/videos/${videoId}/content`
+      console.log(`⬇️ Descargando desde: ${downloadUrl}`)
+
+      // En producción, Vercel generará una URL temporal
+      // Por ahora retornamos la URL del endpoint de descarga
+      // El cliente puede hacer otra petición para obtener el video
+      return downloadUrl
+
     } else if (data.status === 'failed') {
-      throw new Error('La generación del video falló en Sora')
+      const errorMessage = data.error?.message || 'La generación del video falló en Sora'
+      console.error('❌ Video generation failed:', errorMessage)
+      throw new Error(errorMessage)
     }
 
-    // Continuar esperando si está en proceso
+    // Continuar esperando si está en estado: queued, in_progress
   }
 
-  throw new Error('Timeout esperando que el video se genere')
+  throw new Error('Timeout: El video tardó más de 20 minutos en generarse')
 }
