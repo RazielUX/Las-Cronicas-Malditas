@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
         model: "dall-e-3",
         prompt: finalPrompt,
         n: 1,
-        size: "1024x1792", // Formato vertical
+        size: "1024x1792", // Formato vertical 9:16 - IMPORTANTE: debe coincidir con Sora
         quality: "hd",
         style: "vivid"
       })

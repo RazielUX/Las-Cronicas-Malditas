@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       const formData = new FormData()
       formData.append('model', 'sora-2') // Usar sora-2 para rapidez (sora-2-pro para calidad)
       formData.append('prompt', videoPrompt)
-      formData.append('size', '1280x720') // 16:9 horizontal (Sora no soporta 9:16 directamente)
+      formData.append('size', '1024x1792') // DEBE coincidir con el tamaño de la imagen DALL-E (vertical 9:16)
       formData.append('seconds', '8')
       formData.append('input_reference', imageBlob, 'reference.jpg')
 
