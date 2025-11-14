@@ -52,41 +52,55 @@ async function analyzeImageStyle(imageUrls: string[], openai: OpenAI): Promise<s
   try {
     console.log(`🔍 Analizando ${imageUrls.length} imagen(es) previa(s) para extraer estilo...`)
 
-    // Analizar cada imagen con GPT-4 Vision
+    // Analizar cada imagen con GPT-4 Vision (con manejo individual de errores)
     const analysisPromises = imageUrls.map(async (url) => {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analiza esta imagen y extrae SOLO: 1) Paleta de colores dominantes, 2) Estilo artístico/visual, 3) Tipo de iluminación. Sé conciso (max 100 caracteres total)."
-              },
-              {
-                type: "image_url",
-                image_url: { url }
-              }
-            ]
-          }
-        ],
-        max_tokens: 150
-      })
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Describe solo: colores dominantes, estilo visual, tipo de luz. Max 80 caracteres."
+                },
+                {
+                  type: "image_url",
+                  image_url: { url }
+                }
+              ]
+            }
+          ],
+          max_tokens: 100
+        })
 
-      return response.choices[0].message.content || ''
+        return response.choices[0].message.content || ''
+      } catch (visionError: any) {
+        // Si Vision API rechaza la imagen (contenido violento, etc), continuar sin análisis
+        console.warn(`⚠️ No se pudo analizar imagen (bloqueada por filtros): ${visionError.message}`)
+        return '' // Devolver vacío para esta imagen
+      }
     })
 
     const analyses = await Promise.all(analysisPromises)
 
+    // Filtrar análisis vacíos
+    const validAnalyses = analyses.filter(a => a.trim().length > 0)
+
+    if (validAnalyses.length === 0) {
+      console.log('⚠️ No se pudieron analizar las imágenes previas, continuando sin coherencia visual')
+      return ''
+    }
+
     // Combinar análisis y crear prefijo de coherencia
-    const stylePrefix = `[COHERENCIA VISUAL CON IMÁGENES PREVIAS: ${analyses.join('; ')}]`
-    console.log(`✓ Características extraídas: ${stylePrefix.slice(0, 150)}...`)
+    const stylePrefix = `[MANTENER COHERENCIA VISUAL: ${validAnalyses.join('; ')}]`
+    console.log(`✓ Características extraídas de ${validAnalyses.length}/${imageUrls.length} imagen(es)`)
 
     return stylePrefix
 
-  } catch (error) {
-    console.warn('⚠️ Error al analizar imágenes previas, continuando sin coherencia:', error)
+  } catch (error: any) {
+    console.warn('⚠️ Error al analizar imágenes previas, continuando sin coherencia:', error.message)
     return ''
   }
 }
