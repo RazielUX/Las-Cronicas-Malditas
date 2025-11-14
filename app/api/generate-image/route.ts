@@ -124,11 +124,13 @@ export async function POST(request: NextRequest) {
     // Analizar imágenes previas para extraer estilo (si existen)
     const stylePrefix = await analyzeImageStyle(previousImageUrls, openai)
 
-    let finalPrompt = stylePrefix ? `${stylePrefix}\n\n${prompt}` : prompt
+    let cleanPrompt = prompt
     let usedSanitized = false
 
     try {
-      // Primer intento con prompt original
+      // Primer intento con prompt original + coherencia visual
+      const finalPrompt = stylePrefix ? `${stylePrefix}\n\n${cleanPrompt}` : cleanPrompt
+
       const response = await openai.images.generate({
         model: "dall-e-3",
         prompt: finalPrompt,
@@ -158,11 +160,15 @@ export async function POST(request: NextRequest) {
       if (firstError.status === 400 && firstError.message?.includes('safety system')) {
         console.log(`⚠️ Prompt rechazado por seguridad, intentando con versión sanitizada...`)
 
-        finalPrompt = sanitizePrompt(prompt)
-        console.log(`📏 Longitud del prompt sanitizado: ${finalPrompt.length} caracteres`)
-        console.log(`🔄 Prompt sanitizado: ${finalPrompt.slice(0, 200)}...`)
+        // IMPORTANTE: Sanitizar SOLO el prompt original, NO el que incluye stylePrefix
+        cleanPrompt = sanitizePrompt(prompt)
+        console.log(`📏 Longitud del prompt sanitizado: ${cleanPrompt.length} caracteres`)
+        console.log(`🔄 Prompt sanitizado: ${cleanPrompt.slice(0, 200)}...`)
 
         usedSanitized = true
+
+        // Segundo intento con prompt sanitizado + coherencia visual
+        const finalPrompt = stylePrefix ? `${stylePrefix}\n\n${cleanPrompt}` : cleanPrompt
 
         // Segundo intento con prompt sanitizado
         const response = await openai.images.generate({
