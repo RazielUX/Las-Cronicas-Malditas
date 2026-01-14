@@ -1,0 +1,48 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Node modules
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+.vercel
+
+# Output files
+output/
+public/uploads/
+
+# Input files (archivos de usuario)
+input/*.pdf
+input/references/*.jpg
+input/references/*.png
+input/references/*.jpeg
+input/references/*.webp
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
